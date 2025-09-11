@@ -1,0 +1,190 @@
+{
+  "timestamp": "2025-09-11T11:43:51.098Z",
+  "test_config": {
+    "clients": 2000,
+    "go_url": "http://proxy-server:10080",
+    "node_url": "http://proxy-server:10090"
+  },
+  "results": {
+    "go": {
+      "avg_response_time": "10.195756767s",
+      "failed_clients": 0,
+      "messages_per_second": 12351.315300579075,
+      "requests_per_second": 74.85645636714591,
+      "success_rate": "100.00%",
+      "successful_clients": 2000,
+      "total_clients": 2000,
+      "total_messages": 330000
+    },
+    "node": {
+      "total_clients": 2000,
+      "successful_clients": 2000,
+      "failed_clients": 0,
+      "success_rate": "100.00%",
+      "avg_response_time": "10.052s",
+      "total_messages": 218000,
+      "messages_per_second": 8667.728991278393,
+      "requests_per_second": 79.52044946126966
+    }
+  },
+  "resources": {
+    "go": {
+      "label": "Go",
+      "containers": {
+        "horizon-deep-server": {
+          "cpu": {
+            "avg": 29.46272727272727,
+            "max": 59.93,
+            "min": 0,
+            "p95": 59.93
+          },
+          "memory": {
+            "avg": 95.31227272727273,
+            "max": 179.1,
+            "min": 7.949,
+            "p95": 179.1
+          },
+          "samples": 11
+        },
+        "horizon-proxy-server": {
+          "cpu": {
+            "avg": 57.96666666666667,
+            "max": 101.07,
+            "min": 0,
+            "p95": 101.07
+          },
+          "memory": {
+            "avg": 172.3171111111111,
+            "max": 276.5,
+            "min": 8.18,
+            "p95": 276.5
+          },
+          "samples": 9
+        },
+        "horizon-sse-go-loadtest-run-6563d2e3e538": {
+          "cpu": {
+            "avg": 41.705,
+            "max": 61.97,
+            "min": 15.68,
+            "p95": 61.97
+          },
+          "memory": {
+            "avg": 127.04125000000002,
+            "max": 171.3,
+            "min": 24.5,
+            "p95": 171.3
+          },
+          "samples": 8
+        }
+      },
+      "aggregate": {
+        "cpu": {
+          "avg": 107.2209090909091,
+          "max": 222.97,
+          "min": 0,
+          "p95": 222.97
+        },
+        "memory": {
+          "avg": 328.6926363636363,
+          "max": 620.2,
+          "min": 7.949,
+          "p95": 620.2
+        },
+        "duration_seconds": 28
+      }
+    },
+    "node": {
+      "label": "Node.js",
+      "containers": {
+        "horizon-node-deep-server": {
+          "cpu": {
+            "avg": 23.483636363636364,
+            "max": 54.29,
+            "min": 0,
+            "p95": 54.29
+          },
+          "memory": {
+            "avg": 151.90909090909093,
+            "max": 203.4,
+            "min": 89.48,
+            "p95": 203.4
+          },
+          "samples": 11
+        },
+        "horizon-node-proxy-server": {
+          "cpu": {
+            "avg": 46.83111111111111,
+            "max": 85.48,
+            "min": 0,
+            "p95": 85.48
+          },
+          "memory": {
+            "avg": 124.75555555555555,
+            "max": 180.2,
+            "min": 20.22,
+            "p95": 180.2
+          },
+          "samples": 9
+        },
+        "horizon-sse-loadtest-run-5919a41a1846": {
+          "cpu": {
+            "avg": 37.41571428571428,
+            "max": 55.66,
+            "min": 20.71,
+            "p95": 55.66
+          },
+          "memory": {
+            "avg": 80.06285714285715,
+            "max": 97.41,
+            "min": 33.57,
+            "p95": 97.41
+          },
+          "samples": 7
+        }
+      },
+      "aggregate": {
+        "cpu": {
+          "avg": 85.61,
+          "max": 192.27,
+          "min": 0,
+          "p95": 192.27
+        },
+        "memory": {
+          "avg": 304.9309090909091,
+          "max": 481.01,
+          "min": 89.48,
+          "p95": 481.01
+        },
+        "duration_seconds": 27
+      }
+    }
+  },
+  "comparison": {
+    "resources": {
+      "CPU - Average (%)": {
+        "Go": "107.22",
+        "Node.js": "85.61"
+      },
+      "CPU - Peak (%)": {
+        "Go": "222.97",
+        "Node.js": "192.27"
+      },
+      "CPU - P95 (%)": {
+        "Go": "222.97",
+        "Node.js": "192.27"
+      },
+      "Memory - Average (MB)": {
+        "Go": "328.69",
+        "Node.js": "304.93"
+      },
+      "Memory - Peak (MB)": {
+        "Go": "620.20",
+        "Node.js": "481.01"
+      },
+      "Memory - P95 (MB)": {
+        "Go": "620.20",
+        "Node.js": "481.01"
+      }
+    }
+  }
+}

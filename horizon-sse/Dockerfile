@@ -16,7 +16,7 @@ COPY package.json ./
 RUN npm install --omit=dev
 COPY --from=builder /app/dist ./dist
 EXPOSE 10091
-CMD ["node", "dist/deep-server/index.js"]
+CMD ["node", "dist/deep-server/index_clean.js"]
 
 # Proxy Server
 FROM node:18-alpine AS proxy-server

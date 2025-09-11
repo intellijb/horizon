@@ -20,30 +20,11 @@ let activeStreams = 0;
 let totalStreams = 0;
 let completedStreams = 0;
 
-// Simulated tokens for streaming (similar to Go version)
-const tokens = [
-  "Hello", " there", "!", " I'm", " a", " simulated", " AI", " response",
-  " that", " streams", " tokens", " slowly", " over", " time", ".",
-  " This", " mimics", " the", " behavior", " of", " real", " AI", " APIs",
-  " like", " OpenAI", "'s", " GPT", " models", ".", " Each", " token",
-  " represents", " a", " small", " piece", " of", " the", " complete", " response",
-  ".", " The", " streaming", " allows", " for", " a", " more", " interactive",
-  " experience", " as", " users", " can", " see", " the", " response", " being",
-  " generated", " in", " real", "-time", " rather", " than", " waiting", " for",
-  " the", " entire", " response", " to", " complete", ".", " This", " test",
-  " server", " simulates", " this", " behavior", " by", " sending", " tokens",
-  " at", " regular", " intervals", " over", " a", " 15", "-second", " period",
-  ".", " The", " proxy", " server", " will", " buffer", " and", " forward",
-  " these", " tokens", " to", " connected", " clients", ".",
-  " Additional", " tokens", " are", " added", " to", " extend", " the", " streaming",
-  " duration", " to", " properly", " test", " the", " system", " under", " longer",
-  " streaming", " conditions", ".", " This", " helps", " verify", " that", " the",
-  " proxy", " server", " can", " handle", " extended", " SSE", " connections",
-  " and", " properly", " buffer", " responses", " over", " a", " longer", " period",
-  ".", " The", " total", " stream", " time", " is", " now", " approximately",
-  " 15", " seconds", " to", " better", " simulate", " real-world", " AI", " response",
-  " times", " for", " complex", " queries", " or", " longer", " generated", " content"
-];
+// EXACTLY 109 tokens to match Go
+const tokens: string[] = [];
+for (let i = 0; i < 109; i++) {
+  tokens.push(`Token_${i} `);
+}
 
 app.use(express.json());
 
@@ -63,7 +44,7 @@ app.post('/v1/chat/completions', (req: Request, res: Response) => {
     'X-Accel-Buffering': 'no'
   });
 
-  // Stream over 15 seconds - but reduce to 10s for fair comparison
+  // Stream over 10 seconds with exactly 109 tokens
   const streamDuration = 10000; // 10 seconds in milliseconds
   const tokenDelay = streamDuration / tokens.length;
   let tokenIndex = 0;
@@ -74,7 +55,7 @@ app.post('/v1/chat/completions', (req: Request, res: Response) => {
         id: streamId,
         object: 'chat.completion.chunk',
         created: Math.floor(Date.now() / 1000),
-        model: 'gpt-4-turbo',
+        model: 'gpt-4',
         choices: [{
           index: 0,
           delta: {
@@ -94,7 +75,7 @@ app.post('/v1/chat/completions', (req: Request, res: Response) => {
         id: streamId,
         object: 'chat.completion.chunk',
         created: Math.floor(Date.now() / 1000),
-        model: 'gpt-4-turbo',
+        model: 'gpt-4',
         choices: [{
           index: 0,
           delta: {},
@@ -136,5 +117,5 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 app.listen(PORT, () => {
-  logger.info(`Deep Server (OpenAI simulator) started on port ${PORT}`);
+  logger.info(`Deep Server (Clean - 109 tokens) started on port ${PORT}`);
 });

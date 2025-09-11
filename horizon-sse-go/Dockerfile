@@ -6,7 +6,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN go build -o deep-server cmd/deep-server/main.go
+RUN go build -o deep-server cmd/deep-server/main_clean.go
 RUN go build -o proxy-server cmd/proxy-server/main.go
 RUN go build -o loadtest cmd/loadtest/main.go
 

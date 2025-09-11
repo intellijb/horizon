@@ -1,6 +1,7 @@
 import express from 'express';
 import { Request, Response } from 'express';
 import winston from 'winston';
+import crypto from 'crypto';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -20,7 +21,49 @@ let activeStreams = 0;
 let totalStreams = 0;
 let completedStreams = 0;
 
-// Simulated tokens for streaming (similar to Go version)
+// Calculate prime numbers (CPU-intensive)
+function calculatePrimes(limit: number): number[] {
+  if (limit < 2) return [];
+  
+  const sieve = new Array(limit + 1).fill(true);
+  sieve[0] = sieve[1] = false;
+  
+  for (let i = 2; i * i <= limit; i++) {
+    if (sieve[i]) {
+      for (let j = i * i; j <= limit; j += i) {
+        sieve[j] = false;
+      }
+    }
+  }
+  
+  const primes: number[] = [];
+  for (let i = 2; i <= limit; i++) {
+    if (sieve[i]) primes.push(i);
+  }
+  return primes;
+}
+
+// CPU-intensive work: calculate checksum and do prime calculation
+function performCPUWork(data: string): string {
+  // Calculate SHA256 hash multiple times for CPU load
+  let hash = crypto.createHash('sha256').update(data).digest();
+  for (let i = 0; i < 100; i++) {
+    hash = crypto.createHash('sha256').update(hash).digest();
+  }
+  
+  // Calculate some primes to add CPU load
+  calculatePrimes(1000);
+  
+  // Do some floating point math
+  let result = 0;
+  for (let i = 1; i <= 100; i++) {
+    result += Math.sqrt(i) * Math.sin(i);
+  }
+  
+  return hash.toString('hex');
+}
+
+// Use exactly 109 tokens to match Go
 const tokens = [
   "Hello", " there", "!", " I'm", " a", " simulated", " AI", " response",
   " that", " streams", " tokens", " slowly", " over", " time", ".",
@@ -32,17 +75,11 @@ const tokens = [
   " generated", " in", " real", "-time", " rather", " than", " waiting", " for",
   " the", " entire", " response", " to", " complete", ".", " This", " test",
   " server", " simulates", " this", " behavior", " by", " sending", " tokens",
-  " at", " regular", " intervals", " over", " a", " 15", "-second", " period",
+  " at", " regular", " intervals", " over", " a", " 10", "-second", " period",
   ".", " The", " proxy", " server", " will", " buffer", " and", " forward",
   " these", " tokens", " to", " connected", " clients", ".",
-  " Additional", " tokens", " are", " added", " to", " extend", " the", " streaming",
-  " duration", " to", " properly", " test", " the", " system", " under", " longer",
-  " streaming", " conditions", ".", " This", " helps", " verify", " that", " the",
-  " proxy", " server", " can", " handle", " extended", " SSE", " connections",
-  " and", " properly", " buffer", " responses", " over", " a", " longer", " period",
-  ".", " The", " total", " stream", " time", " is", " now", " approximately",
-  " 15", " seconds", " to", " better", " simulate", " real-world", " AI", " response",
-  " times", " for", " complex", " queries", " or", " longer", " generated", " content"
+  " Additional", " tokens", " to", " extend", " streaming", " duration", ".",
+  " Testing", " complete", "."
 ];
 
 app.use(express.json());
@@ -63,22 +100,28 @@ app.post('/v1/chat/completions', (req: Request, res: Response) => {
     'X-Accel-Buffering': 'no'
   });
 
-  // Stream over 15 seconds - but reduce to 10s for fair comparison
+  // Stream over 10 seconds
   const streamDuration = 10000; // 10 seconds in milliseconds
   const tokenDelay = streamDuration / tokens.length;
   let tokenIndex = 0;
 
   const sendToken = () => {
     if (tokenIndex < tokens.length) {
+      const token = tokens[tokenIndex];
+      
+      // Perform CPU-intensive work for each token
+      const checksum = performCPUWork(streamId + token + tokenIndex);
+      
       const response = {
         id: streamId,
         object: 'chat.completion.chunk',
         created: Math.floor(Date.now() / 1000),
         model: 'gpt-4-turbo',
+        checksum: checksum,
         choices: [{
           index: 0,
           delta: {
-            content: tokens[tokenIndex],
+            content: token,
             ...(tokenIndex === 0 ? { role: 'assistant' } : {})
           },
           finish_reason: null
@@ -89,12 +132,16 @@ app.post('/v1/chat/completions', (req: Request, res: Response) => {
       tokenIndex++;
       setTimeout(sendToken, tokenDelay);
     } else {
+      // Perform final CPU work
+      const finalChecksum = performCPUWork(streamId + 'DONE');
+      
       // Send finish message
       const finalResponse = {
         id: streamId,
         object: 'chat.completion.chunk',
         created: Math.floor(Date.now() / 1000),
         model: 'gpt-4-turbo',
+        checksum: finalChecksum,
         choices: [{
           index: 0,
           delta: {},
@@ -136,5 +183,5 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 app.listen(PORT, () => {
-  logger.info(`Deep Server (OpenAI simulator) started on port ${PORT}`);
+  logger.info(`Deep Server (CPU-Intensive) started on port ${PORT}`);
 });
