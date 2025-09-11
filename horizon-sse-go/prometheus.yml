@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: 'proxy-server'
+    static_configs:
+      - targets: ['proxy-server:10080']
+  
+  - job_name: 'deep-server'
+    static_configs:
+      - targets: ['deep-server:10081']
+  
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']

@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSE Client Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #e74c3c;
+            transition: background-color 0.3s;
+        }
+
+        .status-indicator.connected {
+            background-color: #27ae60;
+        }
+
+        .status-indicator.connecting {
+            background-color: #f39c12;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: #2980b9;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background-color: #c0392b;
+        }
+
+        .btn-success {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background-color: #229954;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            min-width: 200px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .logs {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .logs-header {
+            background-color: #34495e;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logs-content {
+            height: 500px;
+            overflow-y: auto;
+            padding: 0;
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .log-entry {
+            padding: 8px 20px;
+            border-bottom: 1px solid #34495e;
+            word-wrap: break-word;
+        }
+
+        .log-entry:hover {
+            background-color: #34495e;
+        }
+
+        .log-timestamp {
+            color: #95a5a6;
+            font-size: 11px;
+        }
+
+        .log-level {
+            font-weight: bold;
+            margin: 0 8px;
+        }
+
+        .log-level.INFO {
+            color: #3498db;
+        }
+
+        .log-level.WARN {
+            color: #f39c12;
+        }
+
+        .log-level.ERROR {
+            color: #e74c3c;
+        }
+
+        .log-level.DEBUG {
+            color: #9b59b6;
+        }
+
+        .log-message {
+            color: #ecf0f1;
+        }
+
+        .log-data {
+            color: #1abc9c;
+            font-style: italic;
+            margin-left: 10px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .event-type {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .event-type.connected { background-color: #27ae60; color: white; }
+        .event-type.heartbeat { background-color: #3498db; color: white; }
+        .event-type.data { background-color: #9b59b6; color: white; }
+        .event-type.notification { background-color: #f39c12; color: white; }
+        .event-type.error { background-color: #e74c3c; color: white; }
+        .event-type.server-shutdown { background-color: #34495e; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SSE Client Demo</h1>
+        
+        <div class="controls">
+            <div class="status">
+                <div class="status-indicator" id="statusIndicator"></div>
+                <span id="statusText">Disconnected</span>
+                <span id="statusDetails"></span>
+            </div>
+            
+            <div class="buttons">
+                <button id="connectBtn" class="btn-primary">Connect</button>
+                <button id="disconnectBtn" class="btn-danger" disabled>Disconnect</button>
+                <button id="clearLogsBtn" class="btn-success">Clear Logs</button>
+                <button id="serverStatusBtn" class="btn-primary">Server Status</button>
+            </div>
+            
+            <div class="input-group">
+                <input type="text" id="serverUrl" placeholder="Server URL" value="http://localhost:3000/events">
+                <input type="text" id="broadcastMessage" placeholder="Custom message to broadcast">
+                <button id="broadcastBtn" class="btn-primary" disabled>Broadcast</button>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="messagesReceived">0</div>
+                <div class="stat-label">Messages Received</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="reconnectAttempts">0</div>
+                <div class="stat-label">Reconnect Attempts</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="connectionTime">00:00</div>
+                <div class="stat-label">Connection Time</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="lastHeartbeat">Never</div>
+                <div class="stat-label">Last Heartbeat</div>
+            </div>
+        </div>
+
+        <div class="logs">
+            <div class="logs-header">
+                <span>Event Logs</span>
+                <span id="logCount">0 entries</span>
+            </div>
+            <div class="logs-content" id="logsContent"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        class Logger {
+            constructor() {
+                this.logs = [];
+                this.maxLogs = 1000;
+            }
+
+            formatMessage(level, message, data) {
+                const timestamp = new Date().toISOString();
+                const entry = {
+                    timestamp,
+                    level,
+                    message,
+                    data
+                };
+                
+                this.logs.push(entry);
+                if (this.logs.length > this.maxLogs) {
+                    this.logs.shift();
+                }
+                
+                this.updateLogsDisplay();
+                return `[${timestamp}] [CLIENT-${level}] ${message}${data ? ` | Data: ${JSON.stringify(data)}` : ''}`;
+            }
+
+            info(message, data) {
+                console.log(this.formatMessage('INFO', message, data));
+            }
+
+            warn(message, data) {
+                console.warn(this.formatMessage('WARN', message, data));
+            }
+
+            error(message, data) {
+                console.error(this.formatMessage('ERROR', message, data));
+            }
+
+            debug(message, data) {
+                console.log(this.formatMessage('DEBUG', message, data));
+            }
+
+            updateLogsDisplay() {
+                const logsContent = document.getElementById('logsContent');
+                const logCount = document.getElementById('logCount');
+                
+                logsContent.innerHTML = this.logs.map(log => {
+                    const dataHtml = log.data ? `<span class="log-data">${JSON.stringify(log.data)}</span>` : '';
+                    return `
+                        <div class="log-entry">
+                            <span class="log-timestamp">${log.timestamp}</span>
+                            <span class="log-level ${log.level}">[${log.level}]</span>
+                            <span class="log-message">${log.message}</span>
+                            ${dataHtml}
+                        </div>
+                    `;
+                }).join('');
+                
+                logCount.textContent = `${this.logs.length} entries`;
+                logsContent.scrollTop = logsContent.scrollHeight;
+            }
+
+            clear() {
+                this.logs = [];
+                this.updateLogsDisplay();
+            }
+        }
+
+        class SSEClient {
+            constructor(config) {
+                this.config = {
+                    reconnectInterval: 3000,
+                    maxReconnectAttempts: 10,
+                    logger: new Logger(),
+                    ...config
+                };
+                
+                this.eventSource = null;
+                this.reconnectAttempts = 0;
+                this.reconnectTimer = null;
+                this.isConnected = false;
+                this.messageHandlers = new Map();
+                this.connectTime = null;
+                this.stats = {
+                    messagesReceived: 0,
+                    reconnectAttempts: 0
+                };
+
+                this.config.logger.info('SSE Client initialized', { 
+                    url: this.config.url,
+                    reconnectInterval: this.config.reconnectInterval,
+                    maxReconnectAttempts: this.config.maxReconnectAttempts
+                });
+            }
+
+            connect() {
+                if (this.eventSource && this.eventSource.readyState !== EventSource.CLOSED) {
+                    this.config.logger.warn('EventSource already exists, closing before reconnecting');
+                    this.eventSource.close();
+                }
+
+                this.config.logger.info('Attempting to connect to SSE server', { 
+                    url: this.config.url,
+                    attempt: this.reconnectAttempts + 1
+                });
+
+                try {
+                    this.eventSource = new EventSource(this.config.url);
+                    this.setupEventListeners();
+                } catch (error) {
+                    this.config.logger.error('Failed to create EventSource', { error, url: this.config.url });
+                    this.handleReconnect();
+                }
+            }
+
+            setupEventListeners() {
+                if (!this.eventSource) return;
+
+                this.eventSource.onopen = (event) => {
+                    this.isConnected = true;
+                    this.reconnectAttempts = 0;
+                    this.connectTime = Date.now();
+                    this.config.logger.info('SSE connection established successfully', {
+                        readyState: this.eventSource?.readyState,
+                        url: this.config.url
+                    });
+                    
+                    if (this.reconnectTimer) {
+                        clearTimeout(this.reconnectTimer);
+                        this.reconnectTimer = null;
+                    }
+
+                    this.triggerHandler('connection', { status: 'connected', timestamp: new Date().toISOString() });
+                };
+
+                this.eventSource.onerror = (event) => {
+                    this.isConnected = false;
+                    this.config.logger.error('SSE connection error', {
+                        readyState: this.eventSource?.readyState,
+                        event: event
+                    });
+
+                    if (this.eventSource?.readyState === EventSource.CLOSED) {
+                        this.config.logger.warn('SSE connection closed by server');
+                        this.handleReconnect();
+                    }
+
+                    this.triggerHandler('error', { 
+                        error: 'Connection error', 
+                        readyState: this.eventSource?.readyState,
+                        timestamp: new Date().toISOString()
+                    });
+                };
+
+                this.eventSource.onmessage = (event) => {
+                    this.stats.messagesReceived++;
+                    this.config.logger.debug('Received generic message', { data: event.data });
+                    try {
+                        const data = JSON.parse(event.data);
+                        this.triggerHandler('message', data);
+                    } catch (error) {
+                        this.config.logger.warn('Failed to parse message data', { data: event.data, error });
+                    }
+                };
+
+                this.setupNamedEventListeners();
+            }
+
+            setupNamedEventListeners() {
+                const eventTypes = ['connected', 'heartbeat', 'data', 'notification', 'server-shutdown'];
+                
+                eventTypes.forEach(eventType => {
+                    this.eventSource?.addEventListener(eventType, (event) => {
+                        this.stats.messagesReceived++;
+                        this.config.logger.info(`Received ${eventType} event`, { data: event.data });
+                        
+                        try {
+                            const data = JSON.parse(event.data);
+                            this.triggerHandler(eventType, data);
+                            
+                            if (eventType === 'server-shutdown') {
+                                this.config.logger.warn('Server is shutting down');
+                                this.disconnect();
+                            }
+                        } catch (error) {
+                            this.config.logger.error(`Failed to parse ${eventType} event data`, { 
+                                data: event.data, 
+                                error 
+                            });
+                        }
+                    });
+                });
+            }
+
+            handleReconnect() {
+                if (this.reconnectAttempts >= this.config.maxReconnectAttempts) {
+                    this.config.logger.error('Maximum reconnection attempts reached', {
+                        attempts: this.reconnectAttempts,
+                        maxAttempts: this.config.maxReconnectAttempts
+                    });
+                    this.triggerHandler('connection', { 
+                        status: 'failed', 
+                        reason: 'max_attempts_reached',
+                        timestamp: new Date().toISOString()
+                    });
+                    return;
+                }
+
+                this.reconnectAttempts++;
+                this.stats.reconnectAttempts++;
+                const delay = this.config.reconnectInterval * Math.min(this.reconnectAttempts, 5);
+                
+                this.config.logger.info(`Scheduling reconnection attempt ${this.reconnectAttempts}`, {
+                    delay,
+                    maxAttempts: this.config.maxReconnectAttempts
+                });
+
+                this.reconnectTimer = setTimeout(() => {
+                    this.connect();
+                }, delay);
+
+                this.triggerHandler('connection', { 
+                    status: 'reconnecting', 
+                    attempt: this.reconnectAttempts,
+                    delay,
+                    timestamp: new Date().toISOString()
+                });
+            }
+
+            on(eventType, handler) {
+                if (!this.messageHandlers.has(eventType)) {
+                    this.messageHandlers.set(eventType, []);
+                }
+                this.messageHandlers.get(eventType).push(handler);
+                this.config.logger.debug(`Registered handler for ${eventType} event`);
+            }
+
+            triggerHandler(eventType, data) {
+                const handlers = this.messageHandlers.get(eventType) || [];
+                handlers.forEach(handler => {
+                    try {
+                        handler(data);
+                    } catch (error) {
+                        this.config.logger.error(`Error in ${eventType} event handler`, { error, data });
+                    }
+                });
+            }
+
+            disconnect() {
+                this.config.logger.info('Disconnecting SSE client');
+
+                if (this.reconnectTimer) {
+                    clearTimeout(this.reconnectTimer);
+                    this.reconnectTimer = null;
+                }
+
+                if (this.eventSource) {
+                    this.eventSource.close();
+                    this.eventSource = null;
+                }
+
+                this.isConnected = false;
+                this.reconnectAttempts = 0;
+                this.connectTime = null;
+                
+                this.triggerHandler('connection', { 
+                    status: 'disconnected', 
+                    timestamp: new Date().toISOString()
+                });
+                
+                this.config.logger.info('SSE client disconnected');
+            }
+
+            getConnectionState() {
+                return {
+                    isConnected: this.isConnected,
+                    readyState: this.eventSource?.readyState || null,
+                    reconnectAttempts: this.reconnectAttempts,
+                    url: this.config.url,
+                    stats: this.stats,
+                    connectTime: this.connectTime
+                };
+            }
+        }
+
+        // UI Management
+        class UIManager {
+            constructor() {
+                this.client = null;
+                this.connectionTimer = null;
+                this.initializeElements();
+                this.bindEvents();
+            }
+
+            initializeElements() {
+                this.elements = {
+                    connectBtn: document.getElementById('connectBtn'),
+                    disconnectBtn: document.getElementById('disconnectBtn'),
+                    clearLogsBtn: document.getElementById('clearLogsBtn'),
+                    serverStatusBtn: document.getElementById('serverStatusBtn'),
+                    broadcastBtn: document.getElementById('broadcastBtn'),
+                    serverUrl: document.getElementById('serverUrl'),
+                    broadcastMessage: document.getElementById('broadcastMessage'),
+                    statusIndicator: document.getElementById('statusIndicator'),
+                    statusText: document.getElementById('statusText'),
+                    statusDetails: document.getElementById('statusDetails'),
+                    messagesReceived: document.getElementById('messagesReceived'),
+                    reconnectAttempts: document.getElementById('reconnectAttempts'),
+                    connectionTime: document.getElementById('connectionTime'),
+                    lastHeartbeat: document.getElementById('lastHeartbeat')
+                };
+            }
+
+            bindEvents() {
+                this.elements.connectBtn.addEventListener('click', () => this.connect());
+                this.elements.disconnectBtn.addEventListener('click', () => this.disconnect());
+                this.elements.clearLogsBtn.addEventListener('click', () => this.clearLogs());
+                this.elements.serverStatusBtn.addEventListener('click', () => this.getServerStatus());
+                this.elements.broadcastBtn.addEventListener('click', () => this.broadcastMessage());
+            }
+
+            connect() {
+                const url = this.elements.serverUrl.value.trim();
+                if (!url) {
+                    alert('Please enter a server URL');
+                    return;
+                }
+
+                this.client = new SSEClient({ url });
+                this.setupClientHandlers();
+                this.client.connect();
+            }
+
+            setupClientHandlers() {
+                this.client.on('connection', (data) => {
+                    this.updateConnectionStatus(data.status);
+                    if (data.status === 'connected') {
+                        this.startConnectionTimer();
+                    } else if (data.status === 'disconnected') {
+                        this.stopConnectionTimer();
+                    }
+                });
+
+                this.client.on('connected', (data) => {
+                    this.addEventLog('connected', data);
+                });
+
+                this.client.on('heartbeat', (data) => {
+                    this.addEventLog('heartbeat', data);
+                    this.elements.lastHeartbeat.textContent = new Date().toLocaleTimeString();
+                });
+
+                this.client.on('data', (data) => {
+                    this.addEventLog('data', data);
+                });
+
+                this.client.on('notification', (data) => {
+                    this.addEventLog('notification', data);
+                });
+
+                this.client.on('error', (data) => {
+                    this.addEventLog('error', data);
+                });
+
+                this.client.on('server-shutdown', (data) => {
+                    this.addEventLog('server-shutdown', data);
+                    this.updateConnectionStatus('disconnected');
+                });
+            }
+
+            addEventLog(eventType, data) {
+                const timestamp = new Date().toLocaleTimeString();
+                console.log(`[${timestamp}] [${eventType.toUpperCase()}]`, data);
+                this.updateStats();
+            }
+
+            updateConnectionStatus(status) {
+                const indicator = this.elements.statusIndicator;
+                const text = this.elements.statusText;
+                const details = this.elements.statusDetails;
+
+                indicator.className = 'status-indicator';
+                
+                switch (status) {
+                    case 'connected':
+                        indicator.classList.add('connected');
+                        text.textContent = 'Connected';
+                        details.textContent = `to ${this.client.config.url}`;
+                        this.elements.connectBtn.disabled = true;
+                        this.elements.disconnectBtn.disabled = false;
+                        this.elements.broadcastBtn.disabled = false;
+                        break;
+                    case 'connecting':
+                    case 'reconnecting':
+                        indicator.classList.add('connecting');
+                        text.textContent = status === 'connecting' ? 'Connecting...' : 'Reconnecting...';
+                        details.textContent = '';
+                        break;
+                    case 'disconnected':
+                    case 'failed':
+                        text.textContent = status === 'failed' ? 'Connection Failed' : 'Disconnected';
+                        details.textContent = '';
+                        this.elements.connectBtn.disabled = false;
+                        this.elements.disconnectBtn.disabled = true;
+                        this.elements.broadcastBtn.disabled = true;
+                        break;
+                }
+            }
+
+            updateStats() {
+                if (!this.client) return;
+
+                const state = this.client.getConnectionState();
+                this.elements.messagesReceived.textContent = state.stats.messagesReceived;
+                this.elements.reconnectAttempts.textContent = state.stats.reconnectAttempts;
+            }
+
+            startConnectionTimer() {
+                this.stopConnectionTimer();
+                this.connectionTimer = setInterval(() => {
+                    if (this.client && this.client.connectTime) {
+                        const elapsed = Date.now() - this.client.connectTime;
+                        const minutes = Math.floor(elapsed / 60000);
+                        const seconds = Math.floor((elapsed % 60000) / 1000);
+                        this.elements.connectionTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    }
+                }, 1000);
+            }
+
+            stopConnectionTimer() {
+                if (this.connectionTimer) {
+                    clearInterval(this.connectionTimer);
+                    this.connectionTimer = null;
+                    this.elements.connectionTime.textContent = '00:00';
+                }
+            }
+
+            disconnect() {
+                if (this.client) {
+                    this.client.disconnect();
+                    this.stopConnectionTimer();
+                }
+            }
+
+            clearLogs() {
+                if (this.client && this.client.config.logger) {
+                    this.client.config.logger.clear();
+                }
+            }
+
+            async getServerStatus() {
+                try {
+                    const baseUrl = this.elements.serverUrl.value.replace('/events', '');
+                    const response = await fetch(`${baseUrl}/status`);
+                    const status = await response.json();
+                    alert(`Server Status:\n${JSON.stringify(status, null, 2)}`);
+                } catch (error) {
+                    alert(`Failed to get server status: ${error.message}`);
+                }
+            }
+
+            async broadcastMessage() {
+                const message = this.elements.broadcastMessage.value.trim();
+                if (!message) {
+                    alert('Please enter a message to broadcast');
+                    return;
+                }
+
+                try {
+                    const baseUrl = this.elements.serverUrl.value.replace('/events', '');
+                    const response = await fetch(`${baseUrl}/broadcast`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            event: 'custom',
+                            data: { message, from: 'web-client', timestamp: new Date().toISOString() }
+                        })
+                    });
+                    const result = await response.json();
+                    console.log('Broadcast result:', result);
+                    this.elements.broadcastMessage.value = '';
+                } catch (error) {
+                    alert(`Failed to broadcast message: ${error.message}`);
+                }
+            }
+        }
+
+        // Initialize the app
+        const uiManager = new UIManager();
+    </script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+{
+  "deep_metrics": {},
+  "errors": null,
+  "proxy_metrics": {
+    "deep_server": {
+      "active_streams": 0,
+      "completed_streams": 21128,
+      "timestamp": "2025-09-11T09:52:12Z",
+      "total_streams": 21137
+    },
+    "proxy": {
+      "active_connections": 0,
+      "failed_connections": 0,
+      "proxied_messages": 2898073,
+      "total_connections": 21017
+    },
+    "timestamp": "2025-09-11T09:52:12Z"
+  },
+  "summary": {
+    "avg_response_time": "10.148216686s",
+    "failed_clients": 0,
+    "messages_per_second": 54195.55924870125,
+    "requests_per_second": 328.45793484061363,
+    "success_rate": "100.00%",
+    "successful_clients": 10000,
+    "total_clients": 10000,
+    "total_messages": 1650000
+  },
+  "test_config": {
+    "num_clients": 10000,
+    "server_url": "http://proxy-server:10080"
+  },
+  "test_duration": "30.445298893s",
+  "timestamp": "2025-09-11T09:52:12Z"
+}
