@@ -203,24 +203,52 @@ def visualize(
     return annotated_image
 
 
-def crop_face(image: np.ndarray, bbox, padding: int = CROP_PADDING) -> np.ndarray:
-    """Crop face from image based on bounding box with padding."""
+def crop_face(image: np.ndarray, bbox, target_size: int = 500) -> np.ndarray:
+    """Crop face with 2x enlarged rectangle and resize to target_size x target_size."""
     height, width = image.shape[:2]
     
-    # Calculate crop coordinates with padding
-    x1 = max(0, bbox.origin_x - padding)
-    y1 = max(0, bbox.origin_y - padding)
-    x2 = min(width, bbox.origin_x + bbox.width + padding)
-    y2 = min(height, bbox.origin_y + bbox.height + padding)
+    # Get face rectangle dimensions
+    face_width = bbox.width
+    face_height = bbox.height
+    face_center_x = bbox.origin_x + face_width // 2
+    face_center_y = bbox.origin_y + face_height // 2
     
-    # Crop the face
+    # Enlarge crop area to 2x the face size
+    crop_size = max(face_width, face_height) * 2
+    
+    # Calculate crop coordinates centered on face
+    x1 = max(0, face_center_x - crop_size // 2)
+    y1 = max(0, face_center_y - crop_size // 2)
+    x2 = min(width, face_center_x + crop_size // 2)
+    y2 = min(height, face_center_y + crop_size // 2)
+    
+    # Ensure we have a square crop area
+    crop_width = x2 - x1
+    crop_height = y2 - y1
+    crop_dimension = min(crop_width, crop_height)
+    
+    # Adjust to make it square
+    x2 = x1 + crop_dimension
+    y2 = y1 + crop_dimension
+    
+    # Final bounds check
+    x2 = min(x2, width)
+    y2 = min(y2, height)
+    x1 = max(0, x2 - crop_dimension)
+    y1 = max(0, y2 - crop_dimension)
+    
+    # Crop the enlarged face area
     cropped = image[y1:y2, x1:x2]
+    
+    # Resize to target size (500x500)
+    if cropped.size > 0:
+        cropped = cv2.resize(cropped, (target_size, target_size), interpolation=cv2.INTER_LANCZOS4)
     
     return cropped
 
 
 def process_image(face_detector, face_landmarker, image_path: Path, output_dir: Path, 
-                 visualize_results: bool = False, padding: int = CROP_PADDING, verbose: bool = False):
+                 visualize_results: bool = False, verbose: bool = False):
     """Process a single image: detect faces, correct rotation, and save cropped faces."""
     
     # Read image
@@ -289,34 +317,23 @@ def process_image(face_detector, face_landmarker, image_path: Path, output_dir: 
         cv2.imwrite(str(vis_path), annotated_bgr)
         print(f"  Saved visualization to {vis_path}")
     
-    # Crop and save the first detected face
+    # Crop and save only the highest confidence face
     if face_detection_result.detections:
-        # Take the first face (highest confidence)
-        detection = face_detection_result.detections[0]
-        bbox = detection.bounding_box
-        cropped_face = crop_face(corrected_image, bbox, padding)
+        # Find the highest confidence face
+        best_detection = max(face_detection_result.detections, 
+                           key=lambda d: d.categories[0].score if d.categories else 0.0)
         
-        # Save cropped face with same name as original
+        bbox = best_detection.bounding_box
+        cropped_face = crop_face(corrected_image, bbox)
+        
+        # Save cropped face with same name as original (500x500)
         crop_path = output_dir / image_path.name
         cv2.imwrite(str(crop_path), cropped_face)
         
         # Get confidence score
-        confidence = detection.categories[0].score if detection.categories else 0.0
-        print(f"  Saved corrected cropped face (confidence: {confidence:.2f}) to {crop_path}")
-        
-        # If there are multiple faces, save the additional ones with a suffix
-        if len(face_detection_result.detections) > 1:
-            for i, detection in enumerate(face_detection_result.detections[1:], 1):
-                bbox = detection.bounding_box
-                cropped_face = crop_face(corrected_image, bbox, padding)
-                
-                # Save additional faces with suffix
-                crop_filename = f"{image_path.stem}_face_{i}.jpg"
-                crop_path = output_dir / crop_filename
-                cv2.imwrite(str(crop_path), cropped_face)
-                
-                confidence = detection.categories[0].score if detection.categories else 0.0
-                print(f"  Saved additional face {i} (confidence: {confidence:.2f}) to {crop_path}")
+        confidence = best_detection.categories[0].score if best_detection.categories else 0.0
+        total_faces = len(face_detection_result.detections)
+        print(f"  Saved highest confidence face (confidence: {confidence:.2f}, {total_faces} faces detected) to {crop_path}")
 
 
 def main():
@@ -333,8 +350,6 @@ def main():
                         help='Path to face landmark model')
     parser.add_argument('--confidence', type=float, default=DETECTION_CONFIDENCE,
                         help=f'Minimum detection confidence (default: {DETECTION_CONFIDENCE})')
-    parser.add_argument('--padding', type=int, default=CROP_PADDING,
-                        help=f'Padding pixels around face crops (default: {CROP_PADDING})')
     parser.add_argument('--visualize', action='store_true',
                         help='Save visualization images with bounding boxes')
     parser.add_argument('--verbose', action='store_true',
@@ -404,7 +419,7 @@ def main():
     for image_path in sorted(image_files):
         try:
             process_image(face_detector, face_landmarker, image_path, output_dir, 
-                         args.visualize, args.padding, args.verbose)
+                         args.visualize, args.verbose)
         except Exception as e:
             print(f"Error processing {image_path}: {e}")
             continue
