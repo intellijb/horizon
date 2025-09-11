@@ -1,0 +1,73 @@
+services:
+  deep-server:
+    build:
+      context: .
+      target: deep-server
+    container_name: horizon-node-deep-server
+    ports:
+      - "10091:10091"
+    environment:
+      - PORT=10091
+    networks:
+      - horizon-sse-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:10091/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 512M
+
+  proxy-server:
+    build:
+      context: .
+      target: proxy-server
+    container_name: horizon-node-proxy-server
+    ports:
+      - "10090:10090"
+    environment:
+      - PORT=10090
+      - DEEP_SERVER=http://deep-server:10091
+    depends_on:
+      deep-server:
+        condition: service_healthy
+    networks:
+      - horizon-sse-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:10090/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 512M
+
+  loadtest:
+    build:
+      context: .
+      target: loadtest
+    container_name: horizon-node-loadtest
+    environment:
+      - URL=http://proxy-server:10090
+      - CLIENTS=1000
+      - RAMPUP=15s
+    depends_on:
+      proxy-server:
+        condition: service_healthy
+    networks:
+      - horizon-sse-network
+    profiles:
+      - test
+    volumes:
+      - ./:/work
+    working_dir: /work
+    command: ["node", "/app/dist/loadtest/index.js", "-url", "http://proxy-server:10090", "-clients", "1000", "-rampup", "15s"]
+
+networks:
+  horizon-sse-network:
+    driver: bridge

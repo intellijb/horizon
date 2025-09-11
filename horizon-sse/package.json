@@ -6,9 +6,16 @@
   "scripts": {
     "build": "tsc",
     "dev:server": "ts-node src/server/index.ts",
+    "dev:deep": "ts-node src/deep-server/index.ts",
+    "dev:proxy": "ts-node src/proxy-server/index.ts",
+    "dev:loadtest": "ts-node src/loadtest/index.ts",
     "dev:client": "serve public -l 8080",
     "start": "node dist/server/index.js",
-    "clean": "rm -rf dist"
+    "start:deep": "node dist/deep-server/index.js",
+    "start:proxy": "node dist/proxy-server/index.js",
+    "start:loadtest": "node dist/loadtest/index.js",
+    "clean": "rm -rf dist",
+    "test:local": "npm run build && npm run start:deep & npm run start:proxy & sleep 3 && npm run start:loadtest -- -clients 10 -rampup 2s"
   },
   "keywords": ["sse", "server-sent-events", "typescript", "express", "winston"],
   "author": "",
