@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:17.5-alpine
+    container_name: horizon_postgres
+    environment:
+      POSTGRES_USER: horizon
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: horizon
+    volumes:
+      - ./docker/postgres:/docker-entrypoint-initdb.d:ro
+      - horizon_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-20432}:5432"
+    networks:
+      - horizon_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U horizon -d horizon"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: horizon_redis
+    command: redis-server /usr/local/etc/redis/redis.conf --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - horizon_redis_data:/data
+    ports:
+      - "${REDIS_PORT:-20379}:6379"
+    networks:
+      - horizon_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+networks:
+  horizon_network:
+    name: horizon_network
+    driver: bridge
+
+volumes:
+  horizon_postgres_data:
+    name: horizon_postgres_data
+  horizon_redis_data:
+    name: horizon_redis_data
