@@ -1,10 +1,11 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import env from '@fastify/env';
-import { configSchema } from './config/index.js';
-import postgresPlugin from './plugins/postgres.js';
-import redisPlugin from './plugins/redis.js';
-import healthRoutes from './routes/health.js';
+import { configSchema } from './config/index';
+import postgresPlugin from './plugins/postgres';
+import redisPlugin from './plugins/redis';
+import drizzlePlugin from './plugins/drizzle';
+import healthRoutes from './routes/health';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -47,6 +48,7 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   await app.register(postgresPlugin);
   await app.register(redisPlugin);
+  await app.register(drizzlePlugin);
   
   await app.register(healthRoutes, { prefix: '/health' });
 
