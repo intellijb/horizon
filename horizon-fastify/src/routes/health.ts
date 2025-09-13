@@ -1,11 +1,84 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ConnectionStateManager } from '@modules/connection';
 
+// OpenAPI schemas
+const healthResponseSchema = {
+  type: 'object',
+  properties: {
+    status: { type: 'string', enum: ['healthy', 'unhealthy', 'alive', 'ready', 'not ready', 'started', 'starting'] },
+    timestamp: { type: 'string', format: 'date-time' },
+    uptime: { type: 'number', description: 'Uptime in seconds' },
+    services: {
+      type: 'object',
+      properties: {
+        postgres: { type: 'string', enum: ['up', 'down'] },
+        redis: { type: 'string', enum: ['up', 'down'] },
+      },
+    },
+  },
+} as const;
+
+const livenessResponseSchema = {
+  type: 'object',
+  properties: {
+    status: { type: 'string', enum: ['alive'] },
+    timestamp: { type: 'string', format: 'date-time' },
+    uptime: { type: 'number', description: 'Uptime in seconds' },
+    memory: {
+      type: 'object',
+      properties: {
+        used: { type: 'number', description: 'Used memory in MB' },
+        total: { type: 'number', description: 'Total memory in MB' },
+        unit: { type: 'string', enum: ['MB'] },
+      },
+    },
+  },
+} as const;
+
+const readinessResponseSchema = {
+  type: 'object',
+  properties: {
+    status: { type: 'string', enum: ['ready', 'not ready'] },
+    timestamp: { type: 'string', format: 'date-time' },
+    checks: {
+      type: 'object',
+      properties: {
+        postgres: {
+          type: 'object',
+          properties: {
+            healthy: { type: 'boolean' },
+            responseTime: { type: 'number', description: 'Response time in milliseconds' },
+            timestamp: { type: 'string', format: 'date-time' },
+            error: { type: 'string' },
+          },
+        },
+        redis: {
+          type: 'object',
+          properties: {
+            healthy: { type: 'boolean' },
+            responseTime: { type: 'number', description: 'Response time in milliseconds' },
+            error: { type: 'string' },
+          },
+        },
+      },
+    },
+  },
+} as const;
+
 export default async function healthRoutes(fastify: FastifyInstance) {
   const stateManager = ConnectionStateManager.getInstance();
   
   // Liveness probe - basic check that the service is running
-  fastify.get('/live', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get('/live', {
+    schema: {
+      tags: ['Health'],
+      summary: 'Liveness Probe',
+      description: 'Basic check that the service is running and responding',
+      response: {
+        200: livenessResponseSchema,
+      },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
     return {
       status: 'alive',
       timestamp: new Date().toISOString(),
@@ -19,7 +92,17 @@ export default async function healthRoutes(fastify: FastifyInstance) {
   });
 
   // Readiness probe - check if service is ready to handle requests
-  fastify.get('/ready', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get('/ready', {
+    schema: {
+      tags: ['Health'],
+      summary: 'Readiness Probe',
+      description: 'Check if service is ready to handle requests (all dependencies healthy)',
+      response: {
+        200: readinessResponseSchema,
+        503: readinessResponseSchema,
+      },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
     const checks: any = {
       postgres: null,
       redis: null
@@ -78,7 +161,17 @@ export default async function healthRoutes(fastify: FastifyInstance) {
   });
 
   // Startup probe - check if service has started successfully
-  fastify.get('/startup', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get('/startup', {
+    schema: {
+      tags: ['Health'],
+      summary: 'Startup Probe',
+      description: 'Check if service has started successfully and is initializing',
+      response: {
+        200: healthResponseSchema,
+        503: healthResponseSchema,
+      },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
     const states = stateManager.getAllStates();
     const isStarted = states.overall;
     
@@ -95,7 +188,19 @@ export default async function healthRoutes(fastify: FastifyInstance) {
   });
 
   // Detailed health status
-  fastify.get('/status', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get('/status', {
+    schema: {
+      tags: ['Health'],
+      summary: 'Detailed Health Status',
+      description: 'Comprehensive system health information including metrics and connection details',
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: true,
+        },
+      },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
     const states = stateManager.getAllStates();
     
     const details: any = {
@@ -158,7 +263,16 @@ export default async function healthRoutes(fastify: FastifyInstance) {
   });
 
   // Simplified health check (backward compatibility)
-  fastify.get('/', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get('/', {
+    schema: {
+      tags: ['Health'],
+      summary: 'Basic Health Check',
+      description: 'Simple health status endpoint for backward compatibility',
+      response: {
+        200: healthResponseSchema,
+      },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
     const states = stateManager.getAllStates();
     
     return {

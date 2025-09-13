@@ -66,6 +66,13 @@ const envSchema = z.object({
   // Development
   ENABLE_SWAGGER: z.coerce.boolean().default(false),
   CORS_ORIGIN: z.string().default('*'),
+  
+  // OpenAPI Documentation
+  API_TITLE: z.string().default('Horizon API'),
+  API_DESCRIPTION: z.string().default('Authentication and user management API'),
+  API_VERSION: z.string().default('1.0.0'),
+  API_DOCS_PATH: z.string().default('/docs'),
+  API_SCALAR_PATH: z.string().default('/reference'),
 });
 
 function loadEnvironment(): z.infer<typeof envSchema> {
@@ -107,6 +114,12 @@ export const config = loadEnvironment();
 export const isDevelopment = config.NODE_ENV === 'development';
 export const isProduction = config.NODE_ENV === 'production';
 export const isTest = config.NODE_ENV === 'test';
+
+// Server configuration
+export const server = {
+  host: config.HOST,
+  port: config.PORT,
+} as const;
 
 // Database configuration
 export const dbConfig = {
@@ -153,6 +166,16 @@ export const cookieConfig = {
   sameSite: config.COOKIE_SAME_SITE,
   httpOnly: config.COOKIE_HTTP_ONLY,
   path: '/',
+} as const;
+
+// API Documentation configuration
+export const apiConfig = {
+  title: config.API_TITLE,
+  description: config.API_DESCRIPTION,
+  version: config.API_VERSION,
+  docsPath: config.API_DOCS_PATH,
+  scalarPath: config.API_SCALAR_PATH,
+  enabled: config.ENABLE_SWAGGER || isDevelopment,
 } as const;
 
 // Logging configuration
