@@ -12,7 +12,7 @@
     "paths": {
       "@/*": ["*"],
       "@modules/*": ["modules/*"],
-      "@config": ["config/index"],
+      "@config": ["config"],
       "@db/*": ["db/*"]
     }
   }
