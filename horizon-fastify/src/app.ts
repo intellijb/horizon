@@ -1,7 +1,9 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import env from '@fastify/env';
-import { config, configSchema, logConfigSummary, isDevelopment, isProduction } from '@config';
+import { config, configSchema, logConfigSummary, isDevelopment, isProduction, loggingConfig } from '@config';
+import { logger } from '@modules/logging';
+import loggingPlugin from '@/plugins/logging';
 import connectionPoolPlugin from '@/plugins/connection-pool';
 import postgresPlugin from '@/plugins/postgres';
 import redisPlugin from '@/plugins/redis';
@@ -26,22 +28,33 @@ export async function buildApp(): Promise<FastifyInstance> {
     logConfigSummary();
   }
 
+  // Create Fastify instance with logger configuration
   const app = Fastify({
     logger: {
-      level: isProduction ? 'info' : 'debug',
-      transport: !isProduction 
-        ? {
-            target: 'pino-pretty',
-            options: {
-              translateTime: 'HH:MM:ss Z',
-              ignore: 'pid,hostname'
-            }
-          }
-        : undefined
-    }
+      level: loggingConfig.level,
+      transport: loggingConfig.pretty && isDevelopment ? {
+        target: 'pino-pretty',
+        options: {
+          translateTime: 'HH:MM:ss Z',
+          ignore: 'pid,hostname',
+          colorize: true,
+        }
+      } : undefined,
+      redact: loggingConfig.redactEnabled ? {
+        paths: loggingConfig.redactPaths,
+        censor: '[REDACTED]',
+      } : undefined,
+    },
+    requestIdHeader: 'x-request-id',
+    requestIdLogLabel: 'requestId',
+    disableRequestLogging: true, // We handle this in our middleware
+    ignorePaths: ['/health', '/metrics'],
   });
 
-  // Register env plugin first
+  // Register logging plugin first (includes correlation middleware)
+  await app.register(loggingPlugin);
+
+  // Register env plugin
   await app.register(env, {
     confKey: 'config',
     schema: configSchema,

@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { config as loadDotenv } from 'dotenv';
-import { join } from 'path';
-import { existsSync } from 'fs';
+
+// Load .env file immediately at module load time
+loadDotenv();
 
 // Environment validation schema
 const envSchema = z.object({
@@ -48,32 +49,26 @@ const envSchema = z.object({
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().email().optional(),
   
+  // Logging Configuration
+  LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
+  LOG_PRETTY: z.coerce.boolean().default(false),
+  LOG_REDACT_ENABLED: z.coerce.boolean().default(true),
+  LOG_CORRELATION_ENABLED: z.coerce.boolean().default(true),
+  LOG_REQUEST_ENABLED: z.coerce.boolean().default(true),
+  LOG_REQUEST_HEADERS: z.coerce.boolean().default(false),
+  LOG_RESPONSE_ENABLED: z.coerce.boolean().default(true),
+  LOG_SQL_QUERIES: z.coerce.boolean().default(false),
+  LOG_SLOW_QUERIES_MS: z.coerce.number().int().min(0).default(1000),
+  
   // Monitoring (optional)
   SENTRY_DSN: z.string().optional(),
-  LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   
   // Development
   ENABLE_SWAGGER: z.coerce.boolean().default(false),
   CORS_ORIGIN: z.string().default('*'),
 });
 
-// Load environment variables
 function loadEnvironment(): z.infer<typeof envSchema> {
-  // Try to load .env file from multiple locations
-  const envPaths = [
-    '.env.local',
-    '.env',
-    join(process.cwd(), '.env.local'),
-    join(process.cwd(), '.env'),
-  ];
-  
-  for (const envPath of envPaths) {
-    if (existsSync(envPath)) {
-      loadDotenv({ path: envPath });
-      break;
-    }
-  }
-  
   // Validate environment variables
   try {
     return envSchema.parse(process.env);
@@ -158,6 +153,49 @@ export const cookieConfig = {
   sameSite: config.COOKIE_SAME_SITE,
   httpOnly: config.COOKIE_HTTP_ONLY,
   path: '/',
+} as const;
+
+// Logging configuration
+export const loggingConfig = {
+  level: config.LOG_LEVEL,
+  pretty: config.LOG_PRETTY || isDevelopment,
+  redactEnabled: config.LOG_REDACT_ENABLED,
+  correlationEnabled: config.LOG_CORRELATION_ENABLED,
+  requestEnabled: config.LOG_REQUEST_ENABLED,
+  requestHeaders: config.LOG_REQUEST_HEADERS,
+  responseEnabled: config.LOG_RESPONSE_ENABLED,
+  sqlQueries: config.LOG_SQL_QUERIES || isDevelopment,
+  slowQueriesMs: config.LOG_SLOW_QUERIES_MS,
+  redactPaths: [
+    'password',
+    'passwordHash', 
+    'token',
+    'accessToken',
+    'refreshToken',
+    'authorization',
+    'cookie',
+    'jwt',
+    'secret',
+    'key',
+    'privateKey',
+    'publicKey',
+    'passphrase',
+    'signature',
+    'credentials',
+    'auth',
+    'mfaSecret',
+    'emailVerificationToken',
+    'passwordResetToken',
+    'req.headers.authorization',
+    'req.headers.cookie',
+    'res.headers["set-cookie"]',
+    'body.password',
+    'body.currentPassword', 
+    'body.newPassword',
+    'body.confirmPassword',
+    'query.token',
+    'params.token',
+  ],
 } as const;
 
 // Fastify env plugin schema (for backward compatibility)
