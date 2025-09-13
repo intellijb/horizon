@@ -59,9 +59,9 @@ const envSchema = z.object({
   LOG_PRETTY: z.coerce.boolean().default(false),
   LOG_REDACT_ENABLED: z.coerce.boolean().default(true),
   LOG_CORRELATION_ENABLED: z.coerce.boolean().default(true),
-  LOG_REQUEST_ENABLED: z.coerce.boolean().default(true),
+  LOG_REQUEST_ENABLED: z.coerce.boolean().default(false),
   LOG_REQUEST_HEADERS: z.coerce.boolean().default(false),
-  LOG_RESPONSE_ENABLED: z.coerce.boolean().default(true),
+  LOG_RESPONSE_ENABLED: z.coerce.boolean().default(false),
   LOG_SQL_QUERIES: z.coerce.boolean().default(false),
   LOG_SLOW_QUERIES_MS: z.coerce.number().int().min(0).default(1000),
   
