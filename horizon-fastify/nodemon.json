@@ -3,8 +3,11 @@
   "ext": "ts",
   "ignore": ["src/**/*.spec.ts", "src/**/*.test.ts"],
   "exec": "tsx --tsconfig tsx.config.json src/server.ts",
+  "execMap": {
+    "ts": "node --loader tsconfig-paths/esm --loader tsx/esm"
+  },
   "env": {
     "NODE_ENV": "development",
-    "NODE_OPTIONS": "--experimental-specifier-resolution=node --import tsx/esm"
+    "TS_NODE_BASEURL": "./src"
   }
 }

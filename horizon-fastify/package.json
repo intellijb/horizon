@@ -48,6 +48,7 @@
     "dotenv": "^17.2.2",
     "drizzle-kit": "^0.31.4",
     "nodemon": "^3.1.10",
+    "tsc-alias": "^1.8.16",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"
   }
