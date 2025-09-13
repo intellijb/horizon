@@ -30,12 +30,6 @@ const start = async () => {
   }
 };
 
-// Handle startup errors
-process.on('unhandledRejection', (err) => {
-  console.error('Unhandled rejection during startup:', err);
-  process.exit(1);
-});
-
 start().catch((err) => {
   console.error('Failed to start server:', err);
   process.exit(1);

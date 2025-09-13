@@ -1,4 +1,3 @@
-import { ConnectionStateManager } from '@modules/connection';
 import { ShutdownOptions } from './types';
 
 export type { ShutdownOptions } from './types';
@@ -21,7 +20,6 @@ export class GracefulShutdown {
   private readonly timeout: number;
   private readonly forceExit: boolean;
   private readonly signals: NodeJS.Signals[];
-  private readonly stateManager: ConnectionStateManager;
   
   constructor(
     private readonly server: Server,
@@ -31,29 +29,28 @@ export class GracefulShutdown {
     this.timeout = options.timeout || 30000; // 30 seconds default
     this.forceExit = options.forceExit !== false;
     this.signals = options.signals || ['SIGTERM', 'SIGINT', 'SIGUSR2'];
-    this.stateManager = ConnectionStateManager.getInstance();
     
     this.registerSignalHandlers();
   }
   
   private registerSignalHandlers(): void {
     for (const signal of this.signals) {
-      process.on(signal, async () => {
+      process.on(signal, () => {
         this.logger.info(`Received ${signal} signal, starting graceful shutdown...`);
-        await this.shutdown();
+        this.shutdown().catch((error) => {
+          this.logger.error(error, 'Error during signal shutdown');
+          process.exit(1);
+        });
       });
     }
     
-    // Handle uncaught errors
-    process.on('uncaughtException', async (error) => {
-      this.logger.fatal(error, 'Uncaught exception detected, shutting down...');
-      await this.shutdown(1);
-    });
-    
-    process.on('unhandledRejection', async (reason, promise) => {
-      this.logger.fatal({ reason, promise }, 'Unhandled rejection detected, shutting down...');
-      await this.shutdown(1);
-    });
+    // Handle uncaught errors (only if not already handled)
+    if (process.listenerCount('uncaughtException') === 0) {
+      process.on('uncaughtException', (error) => {
+        this.logger.fatal(error, 'Uncaught exception detected, shutting down...');
+        this.shutdown(1).catch(() => process.exit(1));
+      });
+    }
   }
   
   async shutdown(exitCode: number = 0): Promise<void> {
@@ -175,11 +172,9 @@ export class GracefulShutdown {
   
   getStatus(): {
     isShuttingDown: boolean;
-    connections: any;
   } {
     return {
       isShuttingDown: this.isShuttingDown,
-      connections: this.stateManager.getAllStates(),
     };
   }
 }
