@@ -1,0 +1,121 @@
+{
+  "migrations": [
+    {
+      "fromPath": "src/routes/health.ts",
+      "toModule": "health",
+      "toFile": "modules/health/routes.ts",
+      "breakingChange": false,
+      "action": "refactor"
+    },
+    {
+      "fromPath": "src/routes/test.ts",
+      "toModule": "health",
+      "toFile": "modules/health/routes.ts",
+      "breakingChange": false,
+      "action": "merge"
+    },
+    {
+      "fromPath": "src/plugins/drizzle.ts",
+      "toModule": "plugins",
+      "toFile": "plugins/drizzle.ts",
+      "breakingChange": false,
+      "action": "enhance"
+    },
+    {
+      "fromPath": "src/plugins/openapi.ts",
+      "toModule": "plugins",
+      "toFile": "plugins/swagger.ts",
+      "breakingChange": false,
+      "action": "rename"
+    },
+    {
+      "fromPath": "src/plugins/helmet.ts",
+      "toModule": "plugins",
+      "toFile": "plugins/security.ts",
+      "breakingChange": false,
+      "action": "merge"
+    },
+    {
+      "fromPath": null,
+      "toModule": "entries",
+      "toFile": "modules/entries/routes.ts",
+      "breakingChange": false,
+      "action": "create"
+    },
+    {
+      "fromPath": null,
+      "toModule": "entries",
+      "toFile": "modules/entries/service.ts",
+      "breakingChange": false,
+      "action": "create"
+    },
+    {
+      "fromPath": null,
+      "toModule": "entries",
+      "toFile": "modules/entries/repository.ts",
+      "breakingChange": false,
+      "action": "create"
+    },
+    {
+      "fromPath": null,
+      "toModule": "entries",
+      "toFile": "modules/entries/schemas.ts",
+      "breakingChange": false,
+      "action": "create"
+    },
+    {
+      "fromPath": null,
+      "toModule": "attachments",
+      "toFile": "modules/attachments/routes.ts",
+      "breakingChange": false,
+      "action": "create"
+    },
+    {
+      "fromPath": null,
+      "toModule": "attachments",
+      "toFile": "modules/attachments/service.ts",
+      "breakingChange": false,
+      "action": "create"
+    },
+    {
+      "fromPath": null,
+      "toModule": "attachments",
+      "toFile": "modules/attachments/repository.ts",
+      "breakingChange": false,
+      "action": "create"
+    },
+    {
+      "fromPath": null,
+      "toModule": "attachments",
+      "toFile": "modules/attachments/schemas.ts",
+      "breakingChange": false,
+      "action": "create"
+    },
+    {
+      "fromPath": "src/app.ts",
+      "toModule": "root",
+      "toFile": "app.ts",
+      "breakingChange": false,
+      "action": "refactor"
+    }
+  ],
+  "apiEndpoints": {
+    "preserved": [
+      "/health",
+      "/test"
+    ],
+    "new": [
+      "/entries",
+      "/entries/:id",
+      "/attachments",
+      "/attachments/:id"
+    ]
+  },
+  "dependencies": {
+    "added": [
+      "fastify-type-provider-zod"
+    ],
+    "removed": [],
+    "updated": []
+  }
+}

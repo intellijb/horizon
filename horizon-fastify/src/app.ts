@@ -1,103 +1,105 @@
-import Fastify, { FastifyInstance } from 'fastify';
-import cors from '@fastify/cors';
-import env from '@fastify/env';
-import { config, configSchema, logConfigSummary, isDevelopment, isProduction, loggingConfig, graphqlConfig } from '@config';
-import { logger } from '@modules/logging';
-import loggingPlugin from '@/plugins/logging';
-import helmetPlugin from '@/plugins/helmet';
-import openApiPlugin from '@/plugins/openapi';
-import graphqlPlugin from '@/plugins/graphql';
-import connectionPoolPlugin from '@/plugins/connection-pool';
-import postgresPlugin from '@/plugins/postgres';
-import redisPlugin from '@/plugins/redis';
-import drizzlePlugin from '@/plugins/drizzle';
-import healthRoutes from '@/routes/health';
-import testRoutes from '@/routes/test';
+import Fastify, { FastifyInstance } from "fastify"
+import cors from "@fastify/cors"
+import env from "@fastify/env"
+import { config, configSchema, logConfigSummary, isDevelopment, isProduction, loggingConfig, graphqlConfig } from "@config"
+import { logger } from "@modules/logging"
+import loggingPlugin from "@/plugins/logging"
+import connectionPoolPlugin from "@/plugins/connection-pool"
+import postgresPlugin from "@/plugins/postgres"
+import redisPlugin from "@/plugins/redis"
+import drizzlePlugin from "@/plugins/drizzle"
+import swaggerPlugin from "@/plugins/swagger"
+import securityPlugin from "@/plugins/security"
+import graphqlPlugin from "@/plugins/graphql"
 
-declare module 'fastify' {
+// Module routes
+import entriesRoutes from "@/modules/entries/routes"
+import attachmentsRoutes from "@/modules/attachments/routes"
+import healthRoutes from "@/modules/health/routes"
+
+declare module "fastify" {
   interface FastifyInstance {
     config: {
-      NODE_ENV: string;
-      PORT: number;
-      HOST: string;
-      POSTGRES_URI: string;
-      REDIS_URL: string;
-    };
+      NODE_ENV: string
+      PORT: number
+      HOST: string
+      POSTGRES_URI: string
+      REDIS_URL: string
+    }
   }
 }
 
 export async function buildApp(): Promise<FastifyInstance> {
   // Log configuration summary in development
   if (isDevelopment) {
-    logConfigSummary();
+    logConfigSummary()
   }
 
   // Create Fastify instance with logger configuration
   const app = Fastify({
     logger: {
       level: loggingConfig.level,
-      transport: loggingConfig.pretty && isDevelopment ? {
-        target: 'pino-pretty',
-        options: {
-          translateTime: 'HH:MM:ss Z',
-          ignore: 'pid,hostname',
-          colorize: true,
-        }
-      } : undefined,
-      redact: loggingConfig.redactEnabled ? {
-        paths: loggingConfig.redactPaths,
-        censor: '[REDACTED]',
-      } : undefined,
+      transport:
+        loggingConfig.pretty && isDevelopment
+          ? {
+              target: "pino-pretty",
+              options: {
+                translateTime: "HH:MM:ss Z",
+                ignore: "pid,hostname",
+                colorize: true,
+              },
+            }
+          : undefined,
+      redact: loggingConfig.redactEnabled
+        ? {
+            paths: [...loggingConfig.redactPaths],
+            censor: "[REDACTED]",
+          }
+        : undefined,
     },
-    requestIdHeader: 'x-request-id',
-    requestIdLogLabel: 'requestId',
+    requestIdHeader: "x-request-id",
+    requestIdLogLabel: "requestId",
     disableRequestLogging: true, // We handle this in our middleware
-    ignorePaths: ['/health', '/metrics'],
-  });
+  })
 
   // Register logging plugin first (includes correlation middleware)
-  await app.register(loggingPlugin);
-
-  // Register security headers (helmet) early
-  await app.register(helmetPlugin);
+  await app.register(loggingPlugin)
 
   // Register env plugin
   await app.register(env, {
-    confKey: 'config',
+    confKey: "config",
     schema: configSchema,
-    dotenv: false // We handle env loading in config
-  });
+    dotenv: false, // We handle env loading in config
+  })
 
-  // Register CORS
-  await app.register(cors, {
-    origin: config.CORS_ORIGIN === '*' ? true : config.CORS_ORIGIN.split(','),
-    credentials: true
-  });
+  // Register security plugins (includes helmet, JWT, cookies, CORS)
+  await app.register(securityPlugin)
 
   // Register connection plugins in correct order
   // 1. Connection pool must be first
-  await app.register(connectionPoolPlugin);
-  
+  await app.register(connectionPoolPlugin)
+
   // 2. PostgreSQL and Redis plugins can run in parallel
   await Promise.all([
     app.register(postgresPlugin),
-    app.register(redisPlugin)
-  ]);
-  
+    app.register(redisPlugin),
+  ])
+
   // 3. Drizzle depends on the connection pool
-  await app.register(drizzlePlugin);
-  
-  // Register OpenAPI documentation (conditionally)
-  await app.register(openApiPlugin);
-  
+  await app.register(drizzlePlugin)
+
+  // Register Swagger documentation
+  await app.register(swaggerPlugin)
+
   // Register GraphQL (conditionally)
   if (graphqlConfig.enabled) {
-    await app.register(graphqlPlugin);
+    await app.register(graphqlPlugin)
   }
-  
-  // Register routes
-  await app.register(healthRoutes, { prefix: '/health' });
-  await app.register(testRoutes);
 
-  return app;
+  // Register module routes
+  await app.register(entriesRoutes, { prefix: "/entries" })
+  await app.register(attachmentsRoutes, { prefix: "/attachments" })
+  await app.register(healthRoutes, { prefix: "/health" })
+
+  return app
 }
