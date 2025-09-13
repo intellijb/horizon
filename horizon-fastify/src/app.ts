@@ -3,12 +3,17 @@ import cors from "@fastify/cors"
 import env from "@fastify/env"
 import { config, configSchema, logConfigSummary, isDevelopment, isProduction, loggingConfig, graphqlConfig } from "@config"
 import { logger } from "@modules/logging"
+import {
+  serializerCompiler,
+  validatorCompiler,
+  ZodTypeProvider,
+} from "fastify-type-provider-zod"
 import loggingPlugin from "@/plugins/logging"
 import connectionPoolPlugin from "@/plugins/connection-pool"
 import postgresPlugin from "@/plugins/postgres"
 import redisPlugin from "@/plugins/redis"
 import drizzlePlugin from "@/plugins/drizzle"
-import swaggerPlugin from "@/plugins/swagger"
+import scalarPlugin from "@/plugins/scalar"
 import securityPlugin from "@/plugins/security"
 import graphqlPlugin from "@/plugins/graphql"
 
@@ -62,6 +67,10 @@ export async function buildApp(): Promise<FastifyInstance> {
     disableRequestLogging: true, // We handle this in our middleware
   })
 
+  // Set Zod as the type provider for the app
+  app.setValidatorCompiler(validatorCompiler)
+  app.setSerializerCompiler(serializerCompiler)
+
   // Register logging plugin first (includes correlation middleware)
   await app.register(loggingPlugin)
 
@@ -88,8 +97,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   // 3. Drizzle depends on the connection pool
   await app.register(drizzlePlugin)
 
-  // Register Swagger documentation
-  await app.register(swaggerPlugin)
+  // Register Scalar API documentation
+  await app.register(scalarPlugin)
 
   // Register GraphQL (conditionally)
   if (graphqlConfig.enabled) {
