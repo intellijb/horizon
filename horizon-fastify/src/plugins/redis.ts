@@ -1,27 +1,45 @@
 import fp from 'fastify-plugin';
-import fastifyRedis from '@fastify/redis';
 import { FastifyInstance } from 'fastify';
-import { redisConfig } from '../config/index';
+import { redisConfig } from '@config';
+import { setupRedisManager } from '@modules/redis';
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    redis: any;
+    redisHealthCheck: () => Promise<any>;
+    redisMetrics: () => any;
+    redisExecute: (command: string, ...args: any[]) => Promise<any>;
+  }
+}
 
 async function redisPlugin(fastify: FastifyInstance) {
-  await fastify.register(fastifyRedis, {
-    url: redisConfig.url,
-    maxRetriesPerRequest: redisConfig.maxRetriesPerRequest,
-    retryDelayOnFailover: redisConfig.retryDelayOnFailover,
-    lazyConnect: redisConfig.lazyConnect,
-    closeClient: true,
-    retryStrategy: (times: number) => {
-      if (times > redisConfig.maxRetriesPerRequest) {
-        return null;
-      }
-      return Math.min(times * 50, redisConfig.retryDelayOnFailover);
-    }
+  const { clientManager, initialize, decorators } = setupRedisManager({
+    ...redisConfig,
+    maxRetryAttempts: 5,
+    retryDelay: 1000,
+    enableOfflineQueue: true,
+    logger: fastify.log,
   });
-
-  fastify.log.info('Redis client initialized');
+  
+  // Initialize
+  await initialize();
+  
+  // Decorate Fastify instance
+  if (decorators.redis) {
+    fastify.decorate('redis', decorators.redis);
+  }
+  fastify.decorate('redisHealthCheck', decorators.redisHealthCheck);
+  fastify.decorate('redisMetrics', decorators.redisMetrics);
+  fastify.decorate('redisExecute', decorators.redisExecute);
+  
+  // Cleanup on close
+  fastify.addHook('onClose', async () => {
+    await clientManager.close();
+    fastify.log.info('Redis connection closed');
+  });
 }
 
 export default fp(redisPlugin, {
   name: 'redis',
-  dependencies: ['@fastify/env']
+  dependencies: []
 });

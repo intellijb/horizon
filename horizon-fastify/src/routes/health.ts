@@ -1,35 +1,72 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { ConnectionStateManager } from '@modules/connection';
 
 export default async function healthRoutes(fastify: FastifyInstance) {
-  fastify.get('/', async (request: FastifyRequest, reply: FastifyReply) => {
+  const stateManager = ConnectionStateManager.getInstance();
+  
+  // Liveness probe - basic check that the service is running
+  fastify.get('/live', async (request: FastifyRequest, reply: FastifyReply) => {
     return {
-      status: 'ok',
+      status: 'alive',
       timestamp: new Date().toISOString(),
-      uptime: process.uptime()
+      uptime: process.uptime(),
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+        unit: 'MB'
+      }
     };
   });
 
+  // Readiness probe - check if service is ready to handle requests
   fastify.get('/ready', async (request: FastifyRequest, reply: FastifyReply) => {
-    const checks = {
-      postgres: false,
-      redis: false
+    const checks: any = {
+      postgres: null,
+      redis: null
     };
-
+    
+    // PostgreSQL health check with metrics
     try {
-      const { rows } = await fastify.pg.query('SELECT 1');
-      checks.postgres = rows.length > 0;
+      if ((fastify as any).pgHealthCheck) {
+        checks.postgres = await (fastify as any).pgHealthCheck();
+      } else {
+        const start = Date.now();
+        const { rows } = await fastify.pg.query('SELECT NOW()');
+        checks.postgres = {
+          healthy: rows.length > 0,
+          responseTime: Date.now() - start,
+          timestamp: rows[0]?.now
+        };
+      }
     } catch (err) {
       fastify.log.error(err, 'PostgreSQL health check failed');
+      checks.postgres = {
+        healthy: false,
+        error: (err as Error).message
+      };
     }
 
+    // Redis health check with metrics
     try {
-      await fastify.redis.ping();
-      checks.redis = true;
+      if ((fastify as any).redisHealthCheck) {
+        checks.redis = await (fastify as any).redisHealthCheck();
+      } else {
+        const start = Date.now();
+        const pong = await fastify.redis.ping();
+        checks.redis = {
+          healthy: pong === 'PONG',
+          responseTime: Date.now() - start
+        };
+      }
     } catch (err) {
       fastify.log.error(err, 'Redis health check failed');
+      checks.redis = {
+        healthy: false,
+        error: (err as Error).message
+      };
     }
 
-    const allHealthy = Object.values(checks).every(check => check);
+    const allHealthy = checks.postgres?.healthy && checks.redis?.healthy;
     
     return reply
       .code(allHealthy ? 200 : 503)
@@ -38,5 +75,100 @@ export default async function healthRoutes(fastify: FastifyInstance) {
         checks,
         timestamp: new Date().toISOString()
       });
+  });
+
+  // Startup probe - check if service has started successfully
+  fastify.get('/startup', async (request: FastifyRequest, reply: FastifyReply) => {
+    const states = stateManager.getAllStates();
+    const isStarted = states.overall;
+    
+    return reply
+      .code(isStarted ? 200 : 503)
+      .send({
+        status: isStarted ? 'started' : 'starting',
+        services: {
+          postgres: states.postgres.state,
+          redis: states.redis.state
+        },
+        timestamp: new Date().toISOString()
+      });
+  });
+
+  // Detailed health status
+  fastify.get('/status', async (request: FastifyRequest, reply: FastifyReply) => {
+    const states = stateManager.getAllStates();
+    
+    const details: any = {
+      overall: states.overall,
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      services: {}
+    };
+    
+    // PostgreSQL detailed status
+    if ((fastify as any).pgMetrics && (fastify as any).pgCircuitBreaker) {
+      const pgMetrics = (fastify as any).pgMetrics;
+      const pgCircuitBreaker = (fastify as any).pgCircuitBreaker;
+      details.services.postgres = {
+        state: states.postgres.state,
+        healthy: states.postgres.healthy,
+        pool: {
+          total: pgMetrics.totalConnections,
+          idle: pgMetrics.idleConnections,
+          waiting: pgMetrics.waitingConnections
+        },
+        metrics: {
+          connectionAttempts: pgMetrics.connectionAttempts,
+          successfulConnections: pgMetrics.successfulConnections,
+          failedConnections: pgMetrics.failedConnections,
+          successRate: pgMetrics.connectionAttempts > 0 
+            ? (pgMetrics.successfulConnections / pgMetrics.connectionAttempts * 100).toFixed(2) + '%'
+            : 'N/A'
+        },
+        circuitBreaker: pgCircuitBreaker.state,
+        lastError: pgMetrics.lastError?.message,
+        lastErrorTime: pgMetrics.lastErrorTime
+      };
+    } else {
+      details.services.postgres = states.postgres;
+    }
+    
+    // Redis detailed status
+    details.services.redis = {
+      state: states.redis.state,
+      healthy: states.redis.healthy,
+      status: fastify.redis?.status || 'unknown'
+    };
+    
+    // System metrics
+    details.system = {
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+        external: Math.round(process.memoryUsage().external / 1024 / 1024),
+        unit: 'MB'
+      },
+      cpu: process.cpuUsage(),
+      pid: process.pid,
+      version: process.version,
+      platform: process.platform
+    };
+    
+    return details;
+  });
+
+  // Simplified health check (backward compatibility)
+  fastify.get('/', async (request: FastifyRequest, reply: FastifyReply) => {
+    const states = stateManager.getAllStates();
+    
+    return {
+      status: states.overall ? 'healthy' : 'unhealthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      services: {
+        postgres: states.postgres.healthy ? 'up' : 'down',
+        redis: states.redis.healthy ? 'up' : 'down'
+      }
+    };
   });
 }

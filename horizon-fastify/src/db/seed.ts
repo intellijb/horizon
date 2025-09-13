@@ -1,14 +1,22 @@
-import { createDatabase, getConnection } from './index';
-import { users, devices, refreshTokens } from './schema/auth.schema';
+import { Pool } from 'pg';
+import { dbConfig } from '@config';
+import { createDatabase } from '@modules/database/drizzle-manager';
+import { users, devices } from './schema/auth.schema';
 import { hash } from 'argon2';
 import { nanoid } from 'nanoid';
 
 async function seedDatabase() {
+  // Create a new pool for seeding
+  const pool = new Pool({
+    connectionString: dbConfig.connectionString,
+    max: 1,
+  });
+  
   try {
     console.log('🌱 Starting database seeding...');
     
-    // Initialize database with config
-    const db = createDatabase();
+    // Initialize database with pool
+    const db = createDatabase(pool);
 
     // Create test user
     const testPassword = await hash('test123456');
@@ -45,11 +53,7 @@ async function seedDatabase() {
     process.exit(1);
   } finally {
     // Close connection
-    try {
-      await getConnection().end();
-    } catch (e) {
-      // Ignore connection close errors
-    }
+    await pool.end();
     process.exit(0);
   }
 }

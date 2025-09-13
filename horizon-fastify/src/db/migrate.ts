@@ -1,5 +1,7 @@
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { db, connection } from './index';
+import { Pool } from 'pg';
+import { dbConfig } from '@config';
+import { createDatabase } from '@modules/database/drizzle-manager';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -8,6 +10,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 async function runMigrations() {
+  // Create a new pool for migration
+  const pool = new Pool({
+    connectionString: dbConfig.connectionString,
+    max: 1,
+  });
+  
+  const db = createDatabase(pool);
+  
   try {
     console.log('🚀 Starting database migration...');
     
@@ -20,7 +30,7 @@ async function runMigrations() {
     console.error('❌ Migration failed:', error);
     process.exit(1);
   } finally {
-    await connection.end();
+    await pool.end();
   }
 }
 
