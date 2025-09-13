@@ -21,6 +21,7 @@ import graphqlPlugin from "@/plugins/graphql"
 import entriesRoutes from "@/modules/entries/routes"
 import attachmentsRoutes from "@/modules/attachments/routes"
 import healthRoutes from "@/modules/health/routes"
+import authRoutes from "@/modules/auth/routes"
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -106,6 +107,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   }
 
   // Register module routes
+  await app.register(authRoutes, { prefix: "/auth" })
   await app.register(entriesRoutes, { prefix: "/entries" })
   await app.register(attachmentsRoutes, { prefix: "/attachments" })
   await app.register(healthRoutes, { prefix: "/health" })

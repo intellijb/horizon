@@ -115,8 +115,9 @@ function createResponseLogData(
   request: FastifyRequest,
   reply: FastifyReply
 ): ResponseLogData {
-  const responseTime =
-    Number(process.hrtime.bigint() - BigInt(request.startTime)) / 1000000; // Convert to ms
+  const responseTime = request.startTime
+    ? Number(process.hrtime.bigint() - BigInt(request.startTime)) / 1000000 // Convert to ms
+    : 0;
 
   return {
     statusCode: reply.statusCode,
@@ -134,12 +135,19 @@ function createResponseLogData(
 
 // Correlation middleware plugin
 async function correlationMiddleware(fastify: any) {
+  // onRequest hook to set start time early in the request lifecycle
+  fastify.addHook(
+    "onRequest",
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      // Record start time for response time calculation
+      request.startTime = process.hrtime.bigint();
+    }
+  );
+
   // Pre-handler hook to set up request context
   fastify.addHook(
     "preHandler",
     async (request: FastifyRequest, reply: FastifyReply) => {
-      // Record start time for response time calculation
-      request.startTime = process.hrtime.bigint();
 
       // Create request context
       const context = createRequestContext(request);
@@ -171,7 +179,7 @@ async function correlationMiddleware(fastify: any) {
   fastify.addHook(
     "onSend",
     async (request: FastifyRequest, reply: FastifyReply, payload: any) => {
-      if (loggingConfig.responseEnabled) {
+      if (loggingConfig.responseEnabled && request.logger) {
         const responseLogData = createResponseLogData(request, reply);
 
         // Add response body for logging if it's not too large
