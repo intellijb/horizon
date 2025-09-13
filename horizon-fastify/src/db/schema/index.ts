@@ -4,6 +4,9 @@ export * from './enums';
 // Export all tables from auth schema
 export * from './auth.schema';
 
+// Export all tables from entries schema
+export * from './entries.schema';
+
 // Export all relations
 export * from './relations';
 
