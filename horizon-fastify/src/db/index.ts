@@ -1,27 +1,30 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schema/index';
+import { dbConfig, isDevelopment } from '../config/index';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 let _connection: Pool | null = null;
 
-export function createDatabase(connectionString: string) {
-  if (!connectionString) {
-    throw new Error('POSTGRES_URI environment variable is required');
+export function createDatabase(configOverride?: Partial<typeof dbConfig>) {
+  const finalConfig = { ...dbConfig, ...configOverride };
+
+  if (!finalConfig.connectionString) {
+    throw new Error('Database connection string is required');
   }
 
   // Create the connection pool
   _connection = new Pool({
-    connectionString,
-    max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    connectionString: finalConfig.connectionString,
+    max: finalConfig.max,
+    idleTimeoutMillis: finalConfig.idleTimeoutMillis,
+    connectionTimeoutMillis: finalConfig.connectionTimeoutMillis,
   });
 
   // Create the Drizzle database instance
   _db = drizzle(_connection, { 
     schema,
-    logger: process.env.NODE_ENV === 'development' 
+    logger: isDevelopment
   });
 
   return _db;

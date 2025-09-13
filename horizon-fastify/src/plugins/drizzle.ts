@@ -11,8 +11,8 @@ declare module 'fastify' {
 }
 
 async function drizzlePlugin(fastify: FastifyInstance) {
-  // Initialize database with environment variable
-  const db = createDatabase(fastify.config.POSTGRES_URI);
+  // Initialize database with configuration
+  const db = createDatabase();
   
   // Register the database instance
   fastify.decorate('db', db);

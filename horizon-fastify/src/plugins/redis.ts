@@ -1,18 +1,20 @@
 import fp from 'fastify-plugin';
 import fastifyRedis from '@fastify/redis';
 import { FastifyInstance } from 'fastify';
+import { redisConfig } from '../config/index';
 
 async function redisPlugin(fastify: FastifyInstance) {
   await fastify.register(fastifyRedis, {
-    url: fastify.config.REDIS_URL,
+    url: redisConfig.url,
+    maxRetriesPerRequest: redisConfig.maxRetriesPerRequest,
+    retryDelayOnFailover: redisConfig.retryDelayOnFailover,
+    lazyConnect: redisConfig.lazyConnect,
     closeClient: true,
-    lazyConnect: false,
-    maxRetriesPerRequest: 3,
     retryStrategy: (times: number) => {
-      if (times > 3) {
+      if (times > redisConfig.maxRetriesPerRequest) {
         return null;
       }
-      return Math.min(times * 50, 500);
+      return Math.min(times * 50, redisConfig.retryDelayOnFailover);
     }
   });
 

@@ -2,20 +2,13 @@ import { createDatabase, getConnection } from './index';
 import { users, devices, refreshTokens } from './schema/auth.schema';
 import { hash } from 'argon2';
 import { nanoid } from 'nanoid';
-import { config } from 'dotenv';
-
-// Load environment variables
-config();
 
 async function seedDatabase() {
   try {
     console.log('🌱 Starting database seeding...');
     
-    // Initialize database
-    if (!process.env.POSTGRES_URI) {
-      throw new Error('POSTGRES_URI environment variable is required');
-    }
-    const db = createDatabase(process.env.POSTGRES_URI);
+    // Initialize database with config
+    const db = createDatabase();
 
     // Create test user
     const testPassword = await hash('test123456');

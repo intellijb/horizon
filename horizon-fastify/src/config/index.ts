@@ -1,24 +1,194 @@
-export const configSchema = {
-  type: 'object',
-  required: ['PORT', 'POSTGRES_URI', 'REDIS_URL'],
-  properties: {
-    NODE_ENV: {
-      type: 'string',
-      default: 'development'
-    },
-    PORT: {
-      type: 'number',
-      default: 3000
-    },
-    HOST: {
-      type: 'string',
-      default: '0.0.0.0'
-    },
-    POSTGRES_URI: {
-      type: 'string'
-    },
-    REDIS_URL: {
-      type: 'string'
+import { z } from 'zod';
+import { config as loadDotenv } from 'dotenv';
+import { join } from 'path';
+import { existsSync } from 'fs';
+
+// Environment validation schema
+const envSchema = z.object({
+  // Application
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  PORT: z.coerce.number().int().positive().default(3000),
+  HOST: z.string().default('0.0.0.0'),
+  
+  // Database
+  POSTGRES_URI: z.string().min(1, 'PostgreSQL connection string is required'),
+  DB_POOL_MAX: z.coerce.number().int().positive().default(10),
+  DB_POOL_IDLE_TIMEOUT: z.coerce.number().int().positive().default(30000),
+  DB_CONNECTION_TIMEOUT: z.coerce.number().int().positive().default(2000),
+  
+  // Redis
+  REDIS_URL: z.string().min(1, 'Redis connection string is required'),
+  REDIS_MAX_RETRIES: z.coerce.number().int().min(0).default(3),
+  REDIS_RETRY_DELAY: z.coerce.number().int().positive().default(1000),
+  
+  // JWT Configuration
+  JWT_SECRET: z.string().min(32, 'JWT secret must be at least 32 characters'),
+  JWT_ACCESS_EXPIRES: z.string().default('15m'),
+  JWT_REFRESH_EXPIRES: z.string().default('7d'),
+  JWT_ISSUER: z.string().default('horizon'),
+  JWT_AUDIENCE: z.string().optional(),
+  
+  // Security
+  BCRYPT_ROUNDS: z.coerce.number().int().min(10).max(15).default(12),
+  MAX_DEVICES_PER_USER: z.coerce.number().int().positive().default(5),
+  MAX_LOGIN_ATTEMPTS: z.coerce.number().int().positive().default(5),
+  RATE_LIMIT_WINDOW: z.string().default('15m'),
+  RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
+  
+  // Cookie Settings
+  COOKIE_DOMAIN: z.string().optional(),
+  COOKIE_SECURE: z.coerce.boolean().default(false),
+  COOKIE_SAME_SITE: z.enum(['strict', 'lax', 'none']).default('lax'),
+  COOKIE_HTTP_ONLY: z.coerce.boolean().default(true),
+  
+  // Email (optional)
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().email().optional(),
+  
+  // Monitoring (optional)
+  SENTRY_DSN: z.string().optional(),
+  LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
+  
+  // Development
+  ENABLE_SWAGGER: z.coerce.boolean().default(false),
+  CORS_ORIGIN: z.string().default('*'),
+});
+
+// Load environment variables
+function loadEnvironment(): z.infer<typeof envSchema> {
+  // Try to load .env file from multiple locations
+  const envPaths = [
+    '.env.local',
+    '.env',
+    join(process.cwd(), '.env.local'),
+    join(process.cwd(), '.env'),
+  ];
+  
+  for (const envPath of envPaths) {
+    if (existsSync(envPath)) {
+      loadDotenv({ path: envPath });
+      break;
     }
   }
-};
+  
+  // Validate environment variables
+  try {
+    return envSchema.parse(process.env);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const missingVars = error.issues
+        .filter((err: any) => err.code === 'invalid_type' && err.received === 'undefined')
+        .map((err: any) => err.path.join('.'))
+        .join(', ');
+      
+      const invalidVars = error.issues
+        .filter((err: any) => err.code !== 'invalid_type' || err.received !== 'undefined')
+        .map((err: any) => `${err.path.join('.')}: ${err.message}`)
+        .join('\n  ');
+      
+      let errorMessage = 'Environment validation failed:\n';
+      
+      if (missingVars) {
+        errorMessage += `Missing required variables: ${missingVars}\n`;
+      }
+      
+      if (invalidVars) {
+        errorMessage += `Invalid values:\n  ${invalidVars}`;
+      }
+      
+      throw new Error(errorMessage);
+    }
+    throw error;
+  }
+}
+
+// Export validated config
+export const config = loadEnvironment();
+
+// Derived configurations
+export const isDevelopment = config.NODE_ENV === 'development';
+export const isProduction = config.NODE_ENV === 'production';
+export const isTest = config.NODE_ENV === 'test';
+
+// Database configuration
+export const dbConfig = {
+  connectionString: config.POSTGRES_URI,
+  max: config.DB_POOL_MAX,
+  idleTimeoutMillis: config.DB_POOL_IDLE_TIMEOUT,
+  connectionTimeoutMillis: config.DB_CONNECTION_TIMEOUT,
+} as const;
+
+// Redis configuration
+export const redisConfig = {
+  url: config.REDIS_URL,
+  maxRetriesPerRequest: config.REDIS_MAX_RETRIES,
+  retryDelayOnFailover: config.REDIS_RETRY_DELAY,
+  lazyConnect: true,
+} as const;
+
+// JWT configuration
+export const jwtConfig = {
+  secret: config.JWT_SECRET,
+  sign: {
+    issuer: config.JWT_ISSUER,
+    audience: config.JWT_AUDIENCE,
+    expiresIn: config.JWT_ACCESS_EXPIRES,
+  },
+  refresh: {
+    expiresIn: config.JWT_REFRESH_EXPIRES,
+  },
+} as const;
+
+// Security configuration
+export const securityConfig = {
+  bcryptRounds: config.BCRYPT_ROUNDS,
+  maxDevicesPerUser: config.MAX_DEVICES_PER_USER,
+  maxLoginAttempts: config.MAX_LOGIN_ATTEMPTS,
+  rateLimitWindow: config.RATE_LIMIT_WINDOW,
+  rateLimitMax: config.RATE_LIMIT_MAX,
+} as const;
+
+// Cookie configuration
+export const cookieConfig = {
+  domain: config.COOKIE_DOMAIN,
+  secure: config.COOKIE_SECURE,
+  sameSite: config.COOKIE_SAME_SITE,
+  httpOnly: config.COOKIE_HTTP_ONLY,
+  path: '/',
+} as const;
+
+// Fastify env plugin schema (for backward compatibility)
+export const configSchema = {
+  type: 'object',
+  required: [],
+  properties: {
+    NODE_ENV: { type: 'string', default: config.NODE_ENV },
+    PORT: { type: 'number', default: config.PORT },
+    HOST: { type: 'string', default: config.HOST },
+    POSTGRES_URI: { type: 'string', default: config.POSTGRES_URI },
+    REDIS_URL: { type: 'string', default: config.REDIS_URL },
+  },
+} as const;
+
+// Configuration summary for debugging
+export function logConfigSummary() {
+  const summary = {
+    environment: config.NODE_ENV,
+    server: { host: config.HOST, port: config.PORT },
+    database: { poolMax: config.DB_POOL_MAX },
+    security: { bcryptRounds: config.BCRYPT_ROUNDS },
+    features: {
+      swagger: config.ENABLE_SWAGGER,
+      sentry: !!config.SENTRY_DSN,
+      smtp: !!config.SMTP_HOST,
+    },
+  };
+  
+  console.log('📋 Configuration Summary:');
+  console.log(JSON.stringify(summary, null, 2));
+}
+
+export type Config = typeof config;

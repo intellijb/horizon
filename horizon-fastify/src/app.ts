@@ -1,7 +1,7 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import env from '@fastify/env';
-import { configSchema } from './config/index';
+import { config, configSchema, logConfigSummary, isDevelopment, isProduction } from './config/index';
 import postgresPlugin from './plugins/postgres';
 import redisPlugin from './plugins/redis';
 import drizzlePlugin from './plugins/drizzle';
@@ -20,10 +20,15 @@ declare module 'fastify' {
 }
 
 export async function buildApp(): Promise<FastifyInstance> {
+  // Log configuration summary in development
+  if (isDevelopment) {
+    logConfigSummary();
+  }
+
   const app = Fastify({
     logger: {
-      level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
-      transport: process.env.NODE_ENV !== 'production' 
+      level: isProduction ? 'info' : 'debug',
+      transport: !isProduction 
         ? {
             target: 'pino-pretty',
             options: {
@@ -38,11 +43,11 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(env, {
     confKey: 'config',
     schema: configSchema,
-    dotenv: true
+    dotenv: false // We handle env loading in config
   });
 
   await app.register(cors, {
-    origin: true,
+    origin: config.CORS_ORIGIN === '*' ? true : config.CORS_ORIGIN.split(','),
     credentials: true
   });
 
