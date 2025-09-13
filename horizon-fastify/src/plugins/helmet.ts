@@ -43,10 +43,12 @@ async function helmetPlugin(fastify: FastifyInstance) {
       },
     },
 
-    // Cross-Origin Embedder Policy
-    crossOriginEmbedderPolicy: {
-      policy: isDevelopment ? false : 'require-corp'
-    },
+    // Cross-Origin Embedder Policy - disabled in development for compatibility
+    ...(isDevelopment ? {} : {
+      crossOriginEmbedderPolicy: {
+        policy: 'require-corp'
+      }
+    }),
 
     // Cross-Origin Opener Policy
     crossOriginOpenerPolicy: {

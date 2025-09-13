@@ -94,7 +94,7 @@ function createRequestLogData(request: FastifyRequest): RequestLogData {
 
 // Create response log data
 function createResponseLogData(request: FastifyRequest, reply: FastifyReply): ResponseLogData {
-  const responseTime = Number(process.hrtime.bigint() - request.startTime) / 1000000; // Convert to ms
+  const responseTime = Number(process.hrtime.bigint() - BigInt(request.startTime)) / 1000000; // Convert to ms
   
   return {
     statusCode: reply.statusCode,

@@ -1,11 +1,12 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import env from '@fastify/env';
-import { config, configSchema, logConfigSummary, isDevelopment, isProduction, loggingConfig } from '@config';
+import { config, configSchema, logConfigSummary, isDevelopment, isProduction, loggingConfig, graphqlConfig } from '@config';
 import { logger } from '@modules/logging';
 import loggingPlugin from '@/plugins/logging';
 import helmetPlugin from '@/plugins/helmet';
 import openApiPlugin from '@/plugins/openapi';
+import graphqlPlugin from '@/plugins/graphql';
 import connectionPoolPlugin from '@/plugins/connection-pool';
 import postgresPlugin from '@/plugins/postgres';
 import redisPlugin from '@/plugins/redis';
@@ -88,6 +89,11 @@ export async function buildApp(): Promise<FastifyInstance> {
   
   // Register OpenAPI documentation (conditionally)
   await app.register(openApiPlugin);
+  
+  // Register GraphQL (conditionally)
+  if (graphqlConfig.enabled) {
+    await app.register(graphqlPlugin);
+  }
   
   // Register routes
   await app.register(healthRoutes, { prefix: '/health' });

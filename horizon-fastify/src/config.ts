@@ -78,6 +78,13 @@ const envSchema = z.object({
   API_VERSION: z.string().default('1.0.0'),
   API_DOCS_PATH: z.string().default('/docs'),
   API_SCALAR_PATH: z.string().default('/reference'),
+  
+  // GraphQL Configuration
+  GRAPHQL_ENABLED: z.coerce.boolean().default(true),
+  GRAPHQL_PATH: z.string().default('/graphql'),
+  GRAPHQL_PLAYGROUND: z.coerce.boolean().default(false),
+  GRAPHQL_INTROSPECTION: z.coerce.boolean().default(false),
+  GRAPHQL_QUERY_DEPTH_LIMIT: z.coerce.number().int().positive().default(10),
 });
 
 function loadEnvironment(): z.infer<typeof envSchema> {
@@ -184,6 +191,15 @@ export const apiConfig = {
   docsPath: config.API_DOCS_PATH,
   scalarPath: config.API_SCALAR_PATH,
   enabled: config.ENABLE_SWAGGER || isDevelopment,
+} as const;
+
+// GraphQL configuration
+export const graphqlConfig = {
+  enabled: config.GRAPHQL_ENABLED,
+  path: config.GRAPHQL_PATH,
+  playground: config.GRAPHQL_PLAYGROUND || isDevelopment,
+  introspection: config.GRAPHQL_INTROSPECTION || isDevelopment,
+  queryDepthLimit: config.GRAPHQL_QUERY_DEPTH_LIMIT,
 } as const;
 
 // Logging configuration
