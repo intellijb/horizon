@@ -36,6 +36,11 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW: z.string().default('15m'),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
   
+  // Security Headers (Helmet)
+  HSTS_MAX_AGE: z.coerce.number().int().positive().default(31536000), // 1 year
+  CSP_REPORT_URI: z.string().optional(),
+  FORCE_HTTPS: z.coerce.boolean().default(false),
+  
   // Cookie Settings
   COOKIE_DOMAIN: z.string().optional(),
   COOKIE_SECURE: z.coerce.boolean().default(false),
@@ -157,6 +162,9 @@ export const securityConfig = {
   maxLoginAttempts: config.MAX_LOGIN_ATTEMPTS,
   rateLimitWindow: config.RATE_LIMIT_WINDOW,
   rateLimitMax: config.RATE_LIMIT_MAX,
+  hstsMaxAge: config.HSTS_MAX_AGE,
+  cspReportUri: config.CSP_REPORT_URI,
+  forceHttps: config.FORCE_HTTPS,
 } as const;
 
 // Cookie configuration

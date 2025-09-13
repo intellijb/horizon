@@ -4,12 +4,14 @@ import env from '@fastify/env';
 import { config, configSchema, logConfigSummary, isDevelopment, isProduction, loggingConfig } from '@config';
 import { logger } from '@modules/logging';
 import loggingPlugin from '@/plugins/logging';
+import helmetPlugin from '@/plugins/helmet';
 import openApiPlugin from '@/plugins/openapi';
 import connectionPoolPlugin from '@/plugins/connection-pool';
 import postgresPlugin from '@/plugins/postgres';
 import redisPlugin from '@/plugins/redis';
 import drizzlePlugin from '@/plugins/drizzle';
 import healthRoutes from '@/routes/health';
+import testRoutes from '@/routes/test';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -55,6 +57,9 @@ export async function buildApp(): Promise<FastifyInstance> {
   // Register logging plugin first (includes correlation middleware)
   await app.register(loggingPlugin);
 
+  // Register security headers (helmet) early
+  await app.register(helmetPlugin);
+
   // Register env plugin
   await app.register(env, {
     confKey: 'config',
@@ -86,6 +91,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   
   // Register routes
   await app.register(healthRoutes, { prefix: '/health' });
+  await app.register(testRoutes);
 
   return app;
 }
