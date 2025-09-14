@@ -108,9 +108,9 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // Register module routes
   await app.register(authRoutes)
-  await app.register(entriesRoutes, { prefix: "/entries" })
-  await app.register(attachmentsRoutes, { prefix: "/attachments" })
-  await app.register(healthRoutes, { prefix: "/health" })
+  await app.register(entriesRoutes)
+  await app.register(attachmentsRoutes)
+  await app.register(healthRoutes)
 
   return app
 }

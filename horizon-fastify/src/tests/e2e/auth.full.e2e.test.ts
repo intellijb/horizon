@@ -13,7 +13,7 @@ import {
   authHelpers,
   assertions,
   dbHelpers,
-} from "@test/utils/test-helpers";
+} from "../utils/test-helpers";
 
 describe("Auth Routes Integration Tests", () => {
   let app: any;

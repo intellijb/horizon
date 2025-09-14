@@ -97,3 +97,33 @@ export interface ChangePasswordRequest {
 export interface VerifyEmailRequest {
   Body: z.infer<typeof verifyEmailSchema>
 }
+
+// Consolidated schema exports
+export const authSchemas = {
+  login: loginSchema,
+  register: registerSchema,
+  refreshToken: refreshTokenSchema,
+  forgotPassword: forgotPasswordSchema,
+  resetPassword: resetPasswordSchema,
+  changePassword: changePasswordSchema,
+  verifyEmail: verifyEmailSchema,
+} as const
+
+export const authResponseSchemas = {
+  auth: authResponseSchema,
+  error: errorResponseSchema,
+  message: messageResponseSchema,
+  userProfile: userProfileSchema,
+} as const
+
+export const authRequests = {
+  login: loginSchema,
+  register: registerSchema,
+  refreshToken: refreshTokenSchema,
+  forgotPassword: forgotPasswordSchema,
+  resetPassword: resetPasswordSchema,
+  changePassword: changePasswordSchema,
+  verifyEmail: verifyEmailSchema,
+} as const
+
+// Types are already exported individually above

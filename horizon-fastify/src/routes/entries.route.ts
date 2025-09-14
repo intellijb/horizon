@@ -1,171 +1,88 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify"
+import { FastifyInstance, FastifyRequest } from "fastify"
 import {
-  CreateEntryUseCase,
-  ListEntriesUseCase,
-  CreateAttachmentUseCase,
-  EntriesRepositoryDrizzle,
   EntriesError,
-} from "@modules/features/entries"
-import {
-  CreateEntryBodySchema,
-  UpdateEntryBodySchema,
-  EntryParamsSchema,
-  ListEntriesQuerySchema,
+  EntriesController,
+  entriesSchemas,
   CreateEntryBody,
   UpdateEntryBody,
   EntryParams,
   ListEntriesQuery,
-} from "./entries.types"
+} from "@modules/features/entries"
+import { createRoutesFactory, commonResponses } from "@modules/platform/fastify"
 
-interface CreateEntryRequest {
-  Body: CreateEntryBody
-}
-
-interface UpdateEntryRequest {
-  Body: UpdateEntryBody
-  Params: EntryParams
-}
-
-interface GetEntryRequest {
-  Params: EntryParams
-}
-
-interface DeleteEntryRequest {
-  Params: EntryParams
-}
-
-interface ListEntriesRequest {
-  Querystring: ListEntriesQuery
-}
+// Type-safe request interfaces
+interface CreateEntryRequest extends FastifyRequest { Body: CreateEntryBody }
+interface UpdateEntryRequest extends FastifyRequest { Body: UpdateEntryBody; Params: EntryParams }
+interface GetEntryRequest extends FastifyRequest { Params: EntryParams }
+interface DeleteEntryRequest extends FastifyRequest { Params: EntryParams }
+interface ListEntriesRequest extends FastifyRequest { Querystring: ListEntriesQuery }
 
 export default async function entriesRoutes(fastify: FastifyInstance) {
-  // Initialize repository and use cases
-  const repository = new EntriesRepositoryDrizzle(fastify.db)
-  const createEntryUseCase = new CreateEntryUseCase(repository)
-  const listEntriesUseCase = new ListEntriesUseCase(repository)
+  const controller = new EntriesController(fastify.db)
+  const routes = createRoutesFactory(fastify, {
+    tags: ["Entries"],
+    errorClass: EntriesError,
+  })
 
   // List entries
-  fastify.get<ListEntriesRequest>("/", {
-    schema: {
-      tags: ["Entries"],
-      summary: "List entries",
-      description: "Get a paginated list of entries",
-      querystring: ListEntriesQuerySchema,
-    },
-  }, async (request: FastifyRequest<ListEntriesRequest>, reply: FastifyReply) => {
-    try {
-      const result = await listEntriesUseCase.execute(request.query)
-
-      return reply.send({
-        items: result.items.map(entry => entry.toJSON()),
-        total: result.total,
-        limit: result.limit,
-        offset: result.offset,
-      })
-    } catch (error) {
-      if (error instanceof EntriesError) {
-        return reply.code(error.statusCode).send({ error: error.message })
-      }
-      throw error
-    }
+  routes.get("/entries", {
+    summary: "List entries",
+    description: "Get a paginated list of entries",
   })
+    .withQuery(entriesSchemas.listEntriesQuery)
+    .withResponses(commonResponses.successWithError())
+    .handle(async (request: ListEntriesRequest) => {
+      const { limit, offset, type } = request.query as ListEntriesQuery
+      return await controller.listEntries({ limit, offset, type })
+    })
 
   // Get single entry
-  fastify.get<GetEntryRequest>("/:id", {
-    schema: {
-      tags: ["Entries"],
-      summary: "Get entry by ID",
-      description: "Get a single entry by its ID",
-      params: EntryParamsSchema,
-    },
-  }, async (request: FastifyRequest<GetEntryRequest>, reply: FastifyReply) => {
-    try {
-      const entry = await repository.findEntryById(request.params.id)
-
-      if (!entry) {
-        return reply.code(404).send({ error: "Entry not found" })
-      }
-
-      return reply.send(entry.toJSON())
-    } catch (error) {
-      if (error instanceof EntriesError) {
-        return reply.code(error.statusCode).send({ error: error.message })
-      }
-      throw error
-    }
+  routes.get("/entries/:id", {
+    summary: "Get entry by ID",
+    description: "Get a single entry by its ID",
   })
+    .withParams(entriesSchemas.entryParams)
+    .withResponses(commonResponses.successWithErrorAndNotFound())
+    .handle(async (request: GetEntryRequest) => {
+      const { id } = request.params as EntryParams
+      return await controller.getEntryById(id)
+    })
 
   // Create entry
-  fastify.post<CreateEntryRequest>("/", {
-    schema: {
-      tags: ["Entries"],
-      summary: "Create entry",
-      description: "Create a new entry",
-      body: CreateEntryBodySchema,
-    },
-  }, async (request: FastifyRequest<CreateEntryRequest>, reply: FastifyReply) => {
-    try {
-      const entry = await createEntryUseCase.execute(request.body)
-      return reply.code(201).send(entry.toJSON())
-    } catch (error) {
-      if (error instanceof EntriesError) {
-        return reply.code(error.statusCode).send({ error: error.message })
-      }
-      throw error
-    }
+  routes.post("/entries", {
+    summary: "Create entry",
+    description: "Create a new entry",
   })
+    .withBody(entriesSchemas.createEntryBody)
+    .withResponses(commonResponses.createdWithError())
+    .handle(async (request: CreateEntryRequest) => {
+      const { content, type, metadata } = request.body as CreateEntryBody
+      return await controller.createEntry({ content, type, metadata })
+    })
 
   // Update entry
-  fastify.patch<UpdateEntryRequest>("/:id", {
-    schema: {
-      tags: ["Entries"],
-      summary: "Update entry",
-      description: "Update an existing entry",
-      params: EntryParamsSchema,
-      body: UpdateEntryBodySchema,
-    },
-  }, async (request: FastifyRequest<UpdateEntryRequest>, reply: FastifyReply) => {
-    try {
-      const entry = await repository.updateEntry(request.params.id, request.body)
-
-      if (!entry) {
-        return reply.code(404).send({ error: "Entry not found" })
-      }
-
-      return reply.send(entry.toJSON())
-    } catch (error) {
-      if (error instanceof EntriesError) {
-        return reply.code(error.statusCode).send({ error: error.message })
-      }
-      throw error
-    }
+  routes.patch("/entries/:id", {
+    summary: "Update entry",
+    description: "Update an existing entry",
   })
+    .withParams(entriesSchemas.entryParams)
+    .withBody(entriesSchemas.updateEntryBody)
+    .withResponses(commonResponses.successWithErrorAndNotFound())
+    .handle(async (request: UpdateEntryRequest) => {
+      const { id } = request.params as EntryParams
+      const { content, type, metadata } = request.body as UpdateEntryBody
+      return await controller.updateEntry(id, { content, type, metadata })
+    })
 
   // Delete entry
-  fastify.delete<DeleteEntryRequest>("/:id", {
-    schema: {
-      tags: ["Entries"],
-      summary: "Delete entry",
-      description: "Soft delete an entry",
-      params: EntryParamsSchema,
-    },
-  }, async (request: FastifyRequest<DeleteEntryRequest>, reply: FastifyReply) => {
-    try {
-      const deleted = await repository.deleteEntry(request.params.id)
-
-      if (!deleted) {
-        return reply.code(404).send({ error: "Entry not found" })
-      }
-
-      // Also delete all attachments for this entry
-      await repository.deleteAttachmentsByEntryId(request.params.id)
-
-      return reply.code(204).send()
-    } catch (error) {
-      if (error instanceof EntriesError) {
-        return reply.code(error.statusCode).send({ error: error.message })
-      }
-      throw error
-    }
+  routes.delete("/entries/:id", {
+    summary: "Delete entry",
+    description: "Soft delete an entry",
   })
+    .withParams(entriesSchemas.entryParams)
+    .withResponses(commonResponses.noContentWithErrorAndNotFound())
+    .handle(async (request: DeleteEntryRequest) => {
+      const { id } = request.params as EntryParams
+      return await controller.deleteEntry(id)
+    })
 }

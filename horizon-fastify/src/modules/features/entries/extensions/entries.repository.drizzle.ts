@@ -1,7 +1,7 @@
 import { eq, and, isNull, sql, or } from "drizzle-orm"
 import { NodePgDatabase } from "drizzle-orm/node-postgres"
-import { entries, attachments } from "./schema"
-import * as schema from "./schema"
+import { entries, attachments } from "@modules/platform/database/schema"
+import * as schema from "@modules/platform/database/schema"
 import {
   EntriesRepositoryPort,
   CreateEntryData,

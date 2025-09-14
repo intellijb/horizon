@@ -19,3 +19,10 @@ export * from "./constants/error.codes"
 export { TokenService } from "./business/token.service"
 export { PasswordService } from "./business/password.service"
 export { ValidationService } from "./business/validation.service"
+
+// Export application layer
+export { AuthController } from "./application/auth.controller"
+export * from "./application/auth.types"
+
+// Export schemas and response schemas
+export { authSchemas, authResponseSchemas, authRequests } from "./application/auth.types"

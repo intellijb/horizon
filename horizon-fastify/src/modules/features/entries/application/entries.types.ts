@@ -49,3 +49,19 @@ export type ListEntriesQuery = z.infer<typeof ListEntriesQuerySchema>
 export type CreateAttachmentBody = z.infer<typeof CreateAttachmentBodySchema>
 export type AttachmentParams = z.infer<typeof AttachmentParamsSchema>
 export type ListAttachmentsQuery = z.infer<typeof ListAttachmentsQuerySchema>
+
+// Consolidated schema exports
+export const entriesSchemas = {
+  createEntryBody: CreateEntryBodySchema,
+  updateEntryBody: UpdateEntryBodySchema,
+  entryParams: EntryParamsSchema,
+  listEntriesQuery: ListEntriesQuerySchema,
+} as const
+
+export const attachmentsSchemas = {
+  createAttachmentBody: CreateAttachmentBodySchema,
+  attachmentParams: AttachmentParamsSchema,
+  listAttachmentsQuery: ListAttachmentsQuerySchema,
+} as const
+
+// Types are already exported individually above
