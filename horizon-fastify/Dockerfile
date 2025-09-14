@@ -26,7 +26,6 @@ RUN npm ci --include=dev
 COPY horizon-fastify/src ./src
 COPY horizon-fastify/scripts ./scripts
 COPY horizon-fastify/tsconfig*.json ./
-COPY horizon-fastify/tsc-alias.config.json ./
 
 # Build the application
 RUN npm run build
