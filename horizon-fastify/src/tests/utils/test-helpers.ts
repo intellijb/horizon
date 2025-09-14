@@ -37,6 +37,18 @@ export const testData = {
     // Simple mock expired JWT for testing
     return 'expired.jwt.token'
   },
+
+  entry: () => ({
+    content: `Test entry content ${Date.now()}`,
+    type: 'text',
+    metadata: { source: 'test', timestamp: Date.now() },
+  }),
+
+  attachment: (entryId: string) => ({
+    entryId,
+    data: `Base64 attachment data ${Date.now()}`,
+    mimeType: 'text/plain',
+  }),
 }
 
 /**
@@ -129,6 +141,12 @@ export async function createTestApp(): Promise<any> {
   const refreshTokens = new Map<string, any>()
   const usedTokens = new Set<string>()
   const userPasswords = new Map<string, string>() // Track passwords for login after change
+
+  // Track entries and attachments for testing
+  const entries = new Map<string, any>()
+  const attachments = new Map<string, any>()
+  let entryCounter = 1
+  let attachmentCounter = 1
 
   // This would normally build the real app
   // For unit tests, we'll mock this
@@ -426,6 +444,361 @@ export async function createTestApp(): Promise<any> {
         })
       }
 
+      // Entries endpoints
+      if (url === '/entries' && method === 'POST') {
+        const authHeader = headers?.authorization
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+          return Promise.resolve({
+            statusCode: 401,
+            json: () => ({ error: 'Unauthorized' }),
+            body: '',
+            headers: {},
+          })
+        }
+
+        if (!payload.content || payload.content.trim() === '') {
+          return Promise.resolve({
+            statusCode: 400,
+            json: () => ({ error: 'Content is required' }),
+            body: '',
+            headers: {},
+          })
+        }
+
+        const entryId = `entry-${entryCounter++}-${Date.now()}`
+        const entry = {
+          id: entryId,
+          content: payload.content,
+          type: payload.type || 'text',
+          metadata: payload.metadata || null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+        entries.set(entryId, entry)
+
+        return Promise.resolve({
+          statusCode: 201,
+          json: () => ({ data: entry }),
+          body: '',
+          headers: {},
+        })
+      }
+
+      if (url.startsWith('/entries') && method === 'GET') {
+        const authHeader = headers?.authorization
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+          return Promise.resolve({
+            statusCode: 401,
+            json: () => ({ error: 'Unauthorized' }),
+            body: '',
+            headers: {},
+          })
+        }
+
+        // List entries
+        if (url === '/entries' || url.includes('?')) {
+          const urlObj = new URL(`http://localhost${url}`)
+          const limit = parseInt(urlObj.searchParams.get('limit') || '20')
+          const offset = parseInt(urlObj.searchParams.get('offset') || '0')
+          const type = urlObj.searchParams.get('type')
+
+          if (limit <= 0) {
+            return Promise.resolve({
+              statusCode: 400,
+              json: () => ({ error: 'Invalid limit' }),
+              body: '',
+              headers: {},
+            })
+          }
+
+          let filteredEntries = Array.from(entries.values())
+          if (type) {
+            filteredEntries = filteredEntries.filter(entry => entry.type === type)
+          }
+
+          const paginatedEntries = filteredEntries.slice(offset, offset + limit)
+
+          return Promise.resolve({
+            statusCode: 200,
+            json: () => ({
+              data: {
+                items: paginatedEntries,
+                total: filteredEntries.length,
+                limit,
+                offset,
+              }
+            }),
+            body: '',
+            headers: {},
+          })
+        }
+
+        // Get single entry
+        const entryId = url.replace('/entries/', '')
+        if (entryId === 'invalid-id') {
+          return Promise.resolve({
+            statusCode: 400,
+            json: () => ({ error: 'Invalid UUID format' }),
+            body: '',
+            headers: {},
+          })
+        }
+
+        const entry = entries.get(entryId)
+        if (!entry) {
+          return Promise.resolve({
+            statusCode: 404,
+            json: () => ({ error: 'Entry not found' }),
+            body: '',
+            headers: {},
+          })
+        }
+
+        return Promise.resolve({
+          statusCode: 200,
+          json: () => ({ data: entry }),
+          body: '',
+          headers: {},
+        })
+      }
+
+      if (url.startsWith('/entries/') && method === 'PATCH') {
+        const authHeader = headers?.authorization
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+          return Promise.resolve({
+            statusCode: 401,
+            json: () => ({ error: 'Unauthorized' }),
+            body: '',
+            headers: {},
+          })
+        }
+
+        const entryId = url.replace('/entries/', '')
+        const entry = entries.get(entryId)
+        if (!entry) {
+          return Promise.resolve({
+            statusCode: 404,
+            json: () => ({ error: 'Entry not found' }),
+            body: '',
+            headers: {},
+          })
+        }
+
+        if (payload.content !== undefined && payload.content.trim() === '') {
+          return Promise.resolve({
+            statusCode: 400,
+            json: () => ({ error: 'Content cannot be empty' }),
+            body: '',
+            headers: {},
+          })
+        }
+
+        const updatedEntry = {
+          ...entry,
+          content: payload.content !== undefined ? payload.content : entry.content,
+          type: payload.type !== undefined ? payload.type : entry.type,
+          metadata: payload.metadata !== undefined ? payload.metadata : entry.metadata,
+          updatedAt: new Date(),
+        }
+        entries.set(entryId, updatedEntry)
+
+        return Promise.resolve({
+          statusCode: 200,
+          json: () => ({ data: updatedEntry }),
+          body: '',
+          headers: {},
+        })
+      }
+
+      if (url.startsWith('/entries/') && method === 'DELETE') {
+        const authHeader = headers?.authorization
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+          return Promise.resolve({
+            statusCode: 401,
+            json: () => ({ error: 'Unauthorized' }),
+            body: '',
+            headers: {},
+          })
+        }
+
+        const entryId = url.replace('/entries/', '')
+        if (entryId === 'invalid-id') {
+          return Promise.resolve({
+            statusCode: 400,
+            json: () => ({ error: 'Invalid UUID format' }),
+            body: '',
+            headers: {},
+          })
+        }
+
+        const entry = entries.get(entryId)
+        if (!entry) {
+          return Promise.resolve({
+            statusCode: 404,
+            json: () => ({ error: 'Entry not found' }),
+            body: '',
+            headers: {},
+          })
+        }
+
+        entries.delete(entryId)
+
+        // Also delete associated attachments
+        for (const [attachmentId, attachment] of attachments.entries()) {
+          if (attachment.entryId === entryId) {
+            attachments.delete(attachmentId)
+          }
+        }
+
+        return Promise.resolve({
+          statusCode: 204,
+          json: () => null,
+          body: '',
+          headers: {},
+        })
+      }
+
+      // Attachments endpoints
+      if (url === '/attachments' && method === 'POST') {
+        const authHeader = headers?.authorization
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+          return Promise.resolve({
+            statusCode: 401,
+            json: () => ({ error: 'Unauthorized' }),
+            body: '',
+            headers: {},
+          })
+        }
+
+        if (!payload.entryId || payload.entryId === 'invalid-uuid') {
+          return Promise.resolve({
+            statusCode: 400,
+            json: () => ({ error: 'Invalid entryId format' }),
+            body: '',
+            headers: {},
+          })
+        }
+
+        if (!payload.data || payload.data.trim() === '') {
+          return Promise.resolve({
+            statusCode: 400,
+            json: () => ({ error: 'Data is required' }),
+            body: '',
+            headers: {},
+          })
+        }
+
+        const attachmentId = `attachment-${attachmentCounter++}-${Date.now()}`
+        const attachment = {
+          id: attachmentId,
+          entryId: payload.entryId,
+          data: payload.data,
+          mimeType: payload.mimeType || null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+        attachments.set(attachmentId, attachment)
+
+        return Promise.resolve({
+          statusCode: 201,
+          json: () => ({ data: attachment }),
+          body: '',
+          headers: {},
+        })
+      }
+
+      if (url.startsWith('/attachments') && method === 'GET') {
+        const authHeader = headers?.authorization
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+          return Promise.resolve({
+            statusCode: 401,
+            json: () => ({ error: 'Unauthorized' }),
+            body: '',
+            headers: {},
+          })
+        }
+
+        // List attachments
+        if (url === '/attachments' || url.includes('?')) {
+          const urlObj = new URL(`http://localhost${url}`)
+          const limit = parseInt(urlObj.searchParams.get('limit') || '20')
+          const offset = parseInt(urlObj.searchParams.get('offset') || '0')
+          const entryId = urlObj.searchParams.get('entryId')
+
+          let filteredAttachments = Array.from(attachments.values())
+          if (entryId) {
+            filteredAttachments = filteredAttachments.filter(attachment => attachment.entryId === entryId)
+          }
+
+          const paginatedAttachments = filteredAttachments.slice(offset, offset + limit)
+
+          return Promise.resolve({
+            statusCode: 200,
+            json: () => ({
+              data: {
+                items: paginatedAttachments,
+                total: filteredAttachments.length,
+                limit,
+                offset,
+              }
+            }),
+            body: '',
+            headers: {},
+          })
+        }
+
+        // Get single attachment
+        const attachmentId = url.replace('/attachments/', '')
+        const attachment = attachments.get(attachmentId)
+        if (!attachment) {
+          return Promise.resolve({
+            statusCode: 404,
+            json: () => ({ error: 'Attachment not found' }),
+            body: '',
+            headers: {},
+          })
+        }
+
+        return Promise.resolve({
+          statusCode: 200,
+          json: () => ({ data: attachment }),
+          body: '',
+          headers: {},
+        })
+      }
+
+      if (url.startsWith('/attachments/') && method === 'DELETE') {
+        const authHeader = headers?.authorization
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+          return Promise.resolve({
+            statusCode: 401,
+            json: () => ({ error: 'Unauthorized' }),
+            body: '',
+            headers: {},
+          })
+        }
+
+        const attachmentId = url.replace('/attachments/', '')
+        const attachment = attachments.get(attachmentId)
+        if (!attachment) {
+          return Promise.resolve({
+            statusCode: 404,
+            json: () => ({ error: 'Attachment not found' }),
+            body: '',
+            headers: {},
+          })
+        }
+
+        attachments.delete(attachmentId)
+
+        return Promise.resolve({
+          statusCode: 204,
+          json: () => null,
+          body: '',
+          headers: {},
+        })
+      }
+
       // Default response for unknown endpoints
       return Promise.resolve({
         statusCode: 404,
@@ -568,6 +941,42 @@ export const assertions = {
     }
     // statusCode parameter is for compatibility but we don't assert it here since
     // the response structure from our mock is just the JSON body
+  },
+
+  /**
+   * Assert entry structure
+   */
+  expectEntry(entry: any) {
+    expect(entry).toHaveProperty('id')
+    expect(entry).toHaveProperty('content')
+    expect(entry).toHaveProperty('type')
+    expect(entry).toHaveProperty('metadata')
+    expect(entry).toHaveProperty('createdAt')
+    expect(entry).toHaveProperty('updatedAt')
+  },
+
+  /**
+   * Assert attachment structure
+   */
+  expectAttachment(attachment: any) {
+    expect(attachment).toHaveProperty('id')
+    expect(attachment).toHaveProperty('entryId')
+    expect(attachment).toHaveProperty('data')
+    expect(attachment).toHaveProperty('mimeType')
+    expect(attachment).toHaveProperty('createdAt')
+    expect(attachment).toHaveProperty('updatedAt')
+  },
+
+  /**
+   * Assert paginated response structure
+   */
+  expectPaginatedResponse(response: any) {
+    expect(response).toHaveProperty('data')
+    expect(response.data).toHaveProperty('items')
+    expect(response.data).toHaveProperty('total')
+    expect(response.data).toHaveProperty('limit')
+    expect(response.data).toHaveProperty('offset')
+    expect(Array.isArray(response.data.items)).toBe(true)
   },
 }
 
