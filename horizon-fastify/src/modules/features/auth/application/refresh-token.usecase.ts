@@ -46,6 +46,7 @@ export class RefreshTokenUseCase {
     if (storedToken.revokedAt) {
       await this.repository.logSecurityEvent({
         userId: payload.userId,
+        deviceId: payload.deviceId || null,
         eventType: "REVOKED_TOKEN_USE",
         severity: "high",
         description: "Attempted to use a revoked refresh token",
