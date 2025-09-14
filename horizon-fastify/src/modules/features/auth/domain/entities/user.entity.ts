@@ -82,9 +82,11 @@ export class User implements UserEntity {
       id: this.id,
       email: this.email,
       username: this.username,
+      firstName: null, // Not implemented in schema yet
+      lastName: null, // Not implemented in schema yet
+      role: "user", // Default role as we don't have roles in the schema yet
       isActive: this.isActive,
       emailVerified: this.emailVerified,
-      mfaEnabled: this.mfaEnabled,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     }
