@@ -68,7 +68,10 @@ export default async function authRoutes(fastify: FastifyInstance) {
     description: "Get new access token using refresh token",
   })
     .withBody(authRequests.refreshToken)
-    .withResponses(commonResponses.authResponses(authResponseSchemas.auth))
+    .withResponses({
+      200: authResponseSchemas.auth,
+      ...commonResponses.unauthorized(),
+    })
     .handle(async (request: FastifyRequest<RefreshTokenRequest>) => {
       const { refreshToken } = request.body as RefreshTokenRequest["Body"]
       return await controller.refreshToken(
@@ -128,7 +131,10 @@ export default async function authRoutes(fastify: FastifyInstance) {
     requireAuth: true,
   })
     .withBody(authRequests.changePassword)
-    .withResponses(commonResponses.authResponses(authResponseSchemas.message))
+    .withResponses({
+      200: authResponseSchemas.message,
+      ...commonResponses.unauthorized(),
+    })
     .authHandle(async (request: FastifyRequest<ChangePasswordRequest>, reply, token: string) => {
       const { currentPassword, newPassword } = request.body as ChangePasswordRequest["Body"]
       return await controller.changePassword({ currentPassword, newPassword }, token)
@@ -155,7 +161,10 @@ export default async function authRoutes(fastify: FastifyInstance) {
     description: "Get authenticated user's profile",
     requireAuth: true,
   })
-    .withResponses(commonResponses.authResponses(authResponseSchemas.userProfile))
+    .withResponses({
+      200: authResponseSchemas.userProfile,
+      ...commonResponses.unauthorized(),
+    })
     .authHandle(async (request: FastifyRequest, reply, token: string) => {
       return await controller.getCurrentUser(token)
     })

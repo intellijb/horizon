@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import { z } from "zod";
 import {
   withErrorHandling,
   handleControllerResult,
@@ -269,69 +270,56 @@ export function createRoutesFactory(
   return factory;
 }
 
+// Common error schema using Zod
+const errorResponseSchema = z.object({
+  error: z.string(),
+})
+
 /**
  * Common response schema patterns
+ * These work with fastify-type-provider-zod and use Zod schemas
  */
 export const commonResponses = {
-  success: (dataSchema?: any) => ({
-    200: dataSchema || {
-      type: "object",
-      additionalProperties: true,
-      description: "Success response"
-    },
-  }),
-  created: (dataSchema?: any) => ({
-    201: dataSchema || {
-      type: "object",
-      additionalProperties: true,
-      description: "Created response"
-    },
-  }),
-  noContent: () => ({
-    204: { type: "null", description: "No content" },
-  }),
+  // Basic error responses using Zod schemas
   error: () => ({
-    400: { type: "object", properties: { error: { type: "string" } } },
+    400: errorResponseSchema,
   }),
   unauthorized: () => ({
-    401: { type: "object", properties: { error: { type: "string" } } },
+    401: errorResponseSchema,
   }),
   forbidden: () => ({
-    403: { type: "object", properties: { error: { type: "string" } } },
+    403: errorResponseSchema,
   }),
   notFound: () => ({
-    404: { type: "object", properties: { error: { type: "string" } } },
+    404: errorResponseSchema,
   }),
   rateLimited: () => ({
-    429: { type: "object", properties: { error: { type: "string" } } },
+    429: errorResponseSchema,
+  }),
+  noContent: () => ({
+    204: z.null(),
   }),
 
-  // Common response combinations
-  successWithError: (dataSchema?: any) => ({
-    ...commonResponses.success(dataSchema),
-    ...commonResponses.error(),
-  }),
-  createdWithError: (dataSchema?: any) => ({
-    ...commonResponses.created(dataSchema),
-    ...commonResponses.error(),
-  }),
-  successWithErrorAndNotFound: (dataSchema?: any) => ({
-    ...commonResponses.success(dataSchema),
-    ...commonResponses.error(),
-    ...commonResponses.notFound(),
-  }),
-  noContentWithErrorAndNotFound: () => ({
-    ...commonResponses.noContent(),
-    ...commonResponses.error(),
-    ...commonResponses.notFound(),
-  }),
-  authResponses: (dataSchema?: any) => ({
-    ...commonResponses.success(dataSchema),
-    ...commonResponses.unauthorized(),
-  }),
-  authResponsesWithRateLimit: (dataSchema?: any) => ({
-    ...commonResponses.success(dataSchema),
-    ...commonResponses.unauthorized(),
-    ...commonResponses.rateLimited(),
-  }),
+  // These are deprecated - use direct schema assignment instead
+  // Example: { 200: yourZodSchema, ...commonResponses.unauthorized() }
+  success: (dataSchema?: any) => {
+    console.warn("commonResponses.success() is deprecated. Use direct schema assignment: { 200: yourZodSchema }")
+    return {
+      200: dataSchema || {
+        type: "object",
+        additionalProperties: true,
+        description: "Success response"
+      },
+    }
+  },
+  created: (dataSchema?: any) => {
+    console.warn("commonResponses.created() is deprecated. Use direct schema assignment: { 201: yourZodSchema }")
+    return {
+      201: dataSchema || {
+        type: "object",
+        additionalProperties: true,
+        description: "Created response"
+      },
+    }
+  },
 };
