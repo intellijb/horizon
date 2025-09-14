@@ -10,7 +10,7 @@ ENV NODE_ENV=production
 # ------------------------
 FROM base AS deps
 # Copy package files
-COPY horizon-fastify/package.json horizon-fastify/package-lock.json ./
+COPY package.json package-lock.json ./
 # Install only production dependencies
 RUN npm ci --only=production && npm cache clean --force
 
@@ -19,13 +19,13 @@ RUN npm ci --only=production && npm cache clean --force
 # ------------------------
 FROM base AS builder
 # Copy package files for full install (including dev dependencies)
-COPY horizon-fastify/package.json horizon-fastify/package-lock.json ./
+COPY package.json package-lock.json ./
 RUN npm ci --include=dev
 
 # Copy source code and config files
-COPY horizon-fastify/src ./src
-COPY horizon-fastify/scripts ./scripts
-COPY horizon-fastify/tsconfig*.json ./
+COPY src ./src
+COPY scripts ./scripts
+COPY tsconfig*.json ./
 
 # Build the application
 RUN npm run build
