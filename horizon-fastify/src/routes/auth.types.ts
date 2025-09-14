@@ -47,8 +47,8 @@ export const userSchema = z.object({
   role: z.string(),
   isActive: z.boolean(),
   emailVerified: z.boolean(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 })
 
 export const authResponseSchema = z.object({

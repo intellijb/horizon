@@ -60,9 +60,6 @@ export class RegisterUseCase {
       email: request.email,
       username: request.username,
       password: passwordHash,
-      firstName: request.firstName,
-      lastName: request.lastName,
-      role: "user",
     })
 
     // Create device

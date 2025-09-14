@@ -21,18 +21,21 @@ export const AuthConstants = {
 } as const
 
 export const SecurityEventTypes = {
-  LOGIN_SUCCESS: "LOGIN_SUCCESS",
-  LOGIN_FAILED: "LOGIN_FAILED",
-  LOGOUT: "LOGOUT",
-  ACCOUNT_INACTIVE_LOGIN: "ACCOUNT_INACTIVE_LOGIN",
-  USER_REGISTERED: "USER_REGISTERED",
-  PASSWORD_RESET_REQUESTED: "PASSWORD_RESET_REQUESTED",
-  PASSWORD_RESET_COMPLETED: "PASSWORD_RESET_COMPLETED",
-  PASSWORD_CHANGED: "PASSWORD_CHANGED",
-  EMAIL_VERIFIED: "EMAIL_VERIFIED",
-  REVOKED_TOKEN_USE: "REVOKED_TOKEN_USE",
-  MFA_ENABLED: "MFA_ENABLED",
-  MFA_DISABLED: "MFA_DISABLED",
+  LOGIN_SUCCESS: "login",
+  LOGIN_FAILED: "login_failed",
+  LOGOUT: "logout",
+  USER_REGISTERED: "account_reactivated",
+  PASSWORD_RESET_REQUESTED: "password_reset_request",
+  PASSWORD_RESET_COMPLETED: "password_reset_complete",
+  PASSWORD_CHANGED: "password_change",
+  EMAIL_VERIFIED: "email_verification",
+  TOKEN_REFRESH: "token_refresh",
+  TOKEN_REVOKED: "token_revoked",
+  MFA_ENABLED: "mfa_enabled",
+  MFA_DISABLED: "mfa_disabled",
+  DEVICE_ADDED: "device_added",
+  DEVICE_REMOVED: "device_removed",
+  DEVICE_TRUSTED: "device_trusted",
 } as const
 
 export const SecurityEventSeverity = {

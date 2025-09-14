@@ -29,8 +29,6 @@ export interface SecurityEvent {
   userId: string
   deviceId?: string
   eventType: string
-  severity: "low" | "medium" | "high" | "critical"
-  description: string
   ipAddress?: string
   userAgent?: string
   metadata?: Record<string, any>

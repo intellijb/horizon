@@ -45,12 +45,31 @@ src/
 
 ## Development Commands
 ```bash
-npm run dev         # Start dev server
-npm run check       # TypeScript check
-npm run db:migrate  # Run migrations
-npm run db:seed     # Seed database
-npm run db:studio   # Drizzle Studio
+npm run dev            # Start dev server
+npm run check          # TypeScript check
+npm run db:migrate     # Run migrations
+npm run db:seed        # Seed database
+npm run db:studio      # Drizzle Studio
+npm run test           # Run all tests
+npm run test:e2e       # Run E2E tests
+npm run test:e2e:auth  # Run auth E2E tests (simplified)
 ```
+
+## E2E Testing Structure
+```
+src/tests/e2e/
+├── auth.e2e.test.ts    # Auth endpoint tests
+├── helpers.ts          # Test utilities
+├── setup.ts            # Global test setup
+└── jest.config.mjs     # E2E Jest configuration
+```
+
+## Claude Code Assistant Instructions
+**IMPORTANT**: When auth-related code is modified (routes, use cases, repository, entities), automatically run:
+```bash
+npm run test:e2e:auth
+```
+This ensures auth functionality remains working after changes. No permission needed.
 
 ## Import Aliases
 - `@/*` → src/

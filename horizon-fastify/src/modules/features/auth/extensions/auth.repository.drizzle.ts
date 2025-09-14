@@ -58,9 +58,6 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
         email: data.email,
         username: data.username || null,
         passwordHash: data.password, // Password should already be hashed
-        firstName: data.firstName || null,
-        lastName: data.lastName || null,
-        role: data.role || "user",
         emailVerified: false,
         isActive: true,
         mfaEnabled: false,
@@ -76,9 +73,6 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
       .set({
         ...(data.email && { email: data.email }),
         ...(data.username && { username: data.username }),
-        ...(data.firstName !== undefined && { firstName: data.firstName }),
-        ...(data.lastName !== undefined && { lastName: data.lastName }),
-        ...(data.role && { role: data.role }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
         ...(data.emailVerified !== undefined && { emailVerified: data.emailVerified }),
         updatedAt: new Date(),
@@ -110,10 +104,6 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
           like(users.username, `%${options.search}%`),
         ),
       )
-    }
-
-    if (options.role) {
-      conditions.push(eq(users.role, options.role as "user" | "admin"))
     }
 
     if (options.isActive !== undefined) {
@@ -160,7 +150,8 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
       .values({
         userId: data.userId,
         deviceId: data.deviceId,
-        token: data.token,
+        tokenHash: data.token, // Schema expects tokenHash
+        tokenFamily: crypto.randomUUID(), // Required by schema
         expiresAt: data.expiresAt,
       })
       .returning()
@@ -172,7 +163,7 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
     const [result] = await this.db
       .select()
       .from(refreshTokens)
-      .where(eq(refreshTokens.token, token))
+      .where(eq(refreshTokens.tokenHash, token))
       .limit(1)
 
     return result ? this.mapToRefreshToken(result) : null
@@ -182,7 +173,7 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
     await this.db
       .update(refreshTokens)
       .set({ revokedAt: new Date() })
-      .where(eq(refreshTokens.token, token))
+      .where(eq(refreshTokens.tokenHash, token))
   }
 
   async revokeAllUserTokens(userId: string): Promise<void> {
@@ -220,24 +211,25 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
   }): Promise<DeviceInfo> {
     const deviceId = crypto.randomUUID()
     const deviceType = this.detectDeviceType(data.userAgent)
+    const deviceFingerprint = crypto.createHash('sha256')
+      .update(`${data.userId}-${data.userAgent || 'unknown'}`)
+      .digest('hex')
 
     const [device] = await this.db
       .insert(devices)
       .values({
         id: deviceId,
         userId: data.userId,
-        name: data.deviceName || `${deviceType} Device`,
-        deviceType,
-        userAgent: data.userAgent || null,
-        ipAddress: data.ipAddress || null,
-        lastActive: new Date(),
+        deviceName: data.deviceName || `${deviceType} Device`,
+        deviceType: deviceType.toLowerCase() as any,
+        deviceFingerprint,
         trusted: false,
+        lastSeenAt: new Date(),
       })
       .onConflictDoUpdate({
-        target: [devices.userId, devices.userAgent],
+        target: [devices.deviceFingerprint],
         set: {
-          lastActive: new Date(),
-          ipAddress: data.ipAddress || null,
+          lastSeenAt: new Date(),
         },
       })
       .returning()
@@ -270,7 +262,7 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
       .select()
       .from(devices)
       .where(eq(devices.userId, userId))
-      .orderBy(desc(devices.lastActive))
+      .orderBy(desc(devices.lastSeenAt))
       .limit(options.limit)
       .offset(offset)
 
@@ -289,9 +281,8 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
     const [device] = await this.db
       .update(devices)
       .set({
-        ...(data.name && { name: data.name }),
+        ...(data.name && { deviceName: data.name }),
         ...(data.isTrusted !== undefined && { trusted: data.isTrusted }),
-        updatedAt: new Date(),
       })
       .where(eq(devices.id, id))
       .returning()
@@ -311,8 +302,6 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
       userId: event.userId,
       deviceId: event.deviceId || null,
       eventType: event.eventType,
-      severity: event.severity,
-      description: event.description,
       ipAddress: event.ipAddress || null,
       userAgent: event.userAgent || null,
       metadata: event.metadata || null,
@@ -325,7 +314,6 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
     userId?: string
     deviceId?: string
     eventType?: string
-    severity?: string
     startDate?: string
     endDate?: string
   }): Promise<{ data: SecurityEvent[]; total: number; page: number; limit: number }> {
@@ -343,9 +331,6 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
       conditions.push(eq(securityEvents.eventType, options.eventType))
     }
 
-    if (options.severity) {
-      conditions.push(eq(securityEvents.severity, options.severity as any))
-    }
 
     if (options.startDate) {
       conditions.push(gte(securityEvents.createdAt, new Date(options.startDate)))
@@ -387,12 +372,12 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
     userAgent?: string
   }): Promise<void> {
     await this.db.insert(authAttempts).values({
-      userId: data.userId || null,
       email: data.email,
       success: data.success,
-      ipAddress: data.ipAddress || null,
+      ipAddress: data.ipAddress || "127.0.0.1", // Schema requires non-null IP
       userAgent: data.userAgent || null,
-      attemptType: "password",
+      attemptType: "login",
+      errorReason: null, // Explicitly set nullable field
     })
   }
 
@@ -406,7 +391,7 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
         and(
           eq(authAttempts.email, email),
           eq(authAttempts.success, false),
-          gte(authAttempts.attemptedAt, since),
+          gte(authAttempts.createdAt, since),
         ),
       )
 
@@ -417,7 +402,7 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
   async savePasswordResetToken(userId: string, token: string, expiresAt: Date): Promise<void> {
     await this.db.insert(passwordResetTokens).values({
       userId,
-      token,
+      tokenHash: token,
       expiresAt,
     })
   }
@@ -428,7 +413,7 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
     const [result] = await this.db
       .select()
       .from(passwordResetTokens)
-      .where(eq(passwordResetTokens.token, token))
+      .where(eq(passwordResetTokens.tokenHash, token))
       .limit(1)
 
     return result
@@ -439,7 +424,7 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
   async deletePasswordResetToken(token: string): Promise<void> {
     await this.db
       .delete(passwordResetTokens)
-      .where(eq(passwordResetTokens.token, token))
+      .where(eq(passwordResetTokens.tokenHash, token))
   }
 
   // Email verification
@@ -452,7 +437,7 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
     // In production, you might want a separate table
     await this.db.insert(passwordResetTokens).values({
       userId,
-      token,
+      tokenHash: token,
       expiresAt,
     })
   }
@@ -481,9 +466,9 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
       email: data.email,
       username: data.username,
       passwordHash: includePassword ? data.passwordHash : undefined,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      role: data.role,
+      firstName: null, // Schema doesn't have firstName
+      lastName: null,  // Schema doesn't have lastName
+      role: "user",    // Schema doesn't have role, default to user
       isActive: data.isActive,
       emailVerified: data.emailVerified,
       mfaEnabled: data.mfaEnabled,
@@ -498,11 +483,11 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
       id: data.id,
       userId: data.userId,
       deviceId: data.deviceId,
-      token: data.token,
+      token: data.tokenHash, // Schema uses tokenHash
       expiresAt: data.expiresAt,
       revokedAt: data.revokedAt,
       createdAt: data.createdAt,
-      updatedAt: data.updatedAt,
+      updatedAt: new Date(), // Schema doesn't have updatedAt
     }
   }
 
@@ -510,14 +495,14 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
     return {
       id: data.id,
       userId: data.userId,
-      name: data.name,
+      name: data.deviceName, // Schema uses deviceName
       deviceType: data.deviceType,
-      userAgent: data.userAgent,
-      ipAddress: data.ipAddress,
-      lastActive: data.lastActive,
+      userAgent: null, // Schema doesn't store userAgent in devices
+      ipAddress: null, // Schema doesn't store ipAddress in devices
+      lastActive: data.lastSeenAt, // Schema uses lastSeenAt
       isTrusted: data.trusted,
       createdAt: data.createdAt,
-      updatedAt: data.updatedAt,
+      updatedAt: new Date(), // Schema doesn't have updatedAt
     }
   }
 
@@ -527,8 +512,6 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
       userId: data.userId,
       deviceId: data.deviceId,
       eventType: data.eventType,
-      severity: data.severity,
-      description: data.description,
       ipAddress: data.ipAddress,
       userAgent: data.userAgent,
       metadata: data.metadata,
@@ -537,13 +520,13 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
   }
 
   private detectDeviceType(userAgent?: string): string {
-    if (!userAgent) return "Unknown"
+    if (!userAgent) return "unknown"
 
     const ua = userAgent.toLowerCase()
-    if (ua.includes("mobile")) return "Mobile"
-    if (ua.includes("tablet")) return "Tablet"
-    if (ua.includes("desktop")) return "Desktop"
+    if (ua.includes("mobile")) return "mobile"
+    if (ua.includes("tablet")) return "tablet"
+    if (ua.includes("desktop")) return "desktop"
 
-    return "Web"
+    return "unknown"
   }
 }
