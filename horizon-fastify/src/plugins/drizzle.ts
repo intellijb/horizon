@@ -1,14 +1,14 @@
 import fp from "fastify-plugin"
 import { FastifyInstance } from "fastify"
 import { getSharedPool } from "./connection-pool"
-import { drizzle } from "drizzle-orm/node-postgres"
+import { drizzle, NodePgDatabase } from "drizzle-orm/node-postgres"
 import { sql } from "drizzle-orm"
-import * as schema from "../db/schema/index"
+import * as schema from "@/modules/platform/database/schema"
 
 // Extend Fastify instance to include database
 declare module "fastify" {
   interface FastifyInstance {
-    db: ReturnType<typeof drizzle>
+    db: NodePgDatabase<typeof schema>
   }
 }
 

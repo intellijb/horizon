@@ -2,7 +2,7 @@ import fp from 'fastify-plugin';
 import { FastifyInstance } from 'fastify';
 import { Pool } from 'pg';
 import { dbConfig } from '@config';
-import { setupPostgresManager, PostgresPoolManager } from '@modules/postgres';
+import { setupPostgresManager, PostgresPoolManager } from '@modules/platform/postgres';
 
 declare module 'fastify' {
   interface FastifyInstance {

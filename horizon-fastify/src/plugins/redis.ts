@@ -1,7 +1,7 @@
 import fp from 'fastify-plugin';
 import { FastifyInstance } from 'fastify';
 import { redisConfig } from '@config';
-import { setupRedisManager } from '@modules/redis';
+import { setupRedisManager } from '@modules/platform/redis';
 
 declare module 'fastify' {
   interface FastifyInstance {

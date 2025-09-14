@@ -1,0 +1,155 @@
+import bcrypt from "bcrypt"
+import jwt from "jsonwebtoken"
+import crypto from "crypto"
+import { AuthRepositoryPort } from "../domain/ports/auth-repository.port"
+import { User } from "../domain/entities/user.entity"
+import { TokenPair, TokenPayload } from "../domain/value-objects/token.value"
+
+export interface RegisterRequest {
+  email: string
+  password: string
+  username?: string
+  firstName?: string
+  lastName?: string
+  ipAddress?: string
+  userAgent?: string
+}
+
+export interface RegisterResponse {
+  accessToken: string
+  refreshToken: string
+  expiresIn: number
+  tokenType: string
+  user: Record<string, any>
+}
+
+export class RegisterUseCase {
+  private readonly JWT_SECRET: string
+  private readonly JWT_REFRESH_SECRET: string
+  private readonly ACCESS_TOKEN_EXPIRES_IN = 15 * 60 // 15 minutes
+  private readonly REFRESH_TOKEN_EXPIRES_IN = 7 * 24 * 60 * 60 // 7 days
+  private readonly BCRYPT_ROUNDS = 12
+
+  constructor(private repository: AuthRepositoryPort) {
+    this.JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
+    this.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "your-refresh-secret"
+  }
+
+  async execute(request: RegisterRequest): Promise<RegisterResponse> {
+    // Validate email format
+    if (!this.isValidEmail(request.email)) {
+      throw new Error("Invalid email format")
+    }
+
+    // Validate password strength
+    if (!this.isStrongPassword(request.password)) {
+      throw new Error("Password must be at least 8 characters long")
+    }
+
+    // Check if user already exists
+    const existingUser = await this.repository.findUserByEmail(request.email)
+    if (existingUser) {
+      throw new Error("User with this email already exists")
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(request.password, this.BCRYPT_ROUNDS)
+
+    // Create user
+    const user = await this.repository.createUser({
+      email: request.email,
+      username: request.username,
+      password: passwordHash,
+      firstName: request.firstName,
+      lastName: request.lastName,
+      role: "user",
+    })
+
+    // Create device
+    const device = await this.repository.createOrUpdateDevice({
+      userId: user.id,
+      userAgent: request.userAgent,
+      ipAddress: request.ipAddress,
+    })
+
+    // Generate tokens
+    const tokens = await this.generateTokens(user, device.id)
+
+    // Save refresh token
+    await this.repository.saveRefreshToken({
+      userId: user.id,
+      deviceId: device.id,
+      token: tokens.refreshToken,
+      expiresAt: new Date(Date.now() + this.REFRESH_TOKEN_EXPIRES_IN * 1000),
+    })
+
+    // Generate email verification token
+    const verificationToken = crypto.randomBytes(32).toString("hex")
+    await this.repository.saveEmailVerificationToken(
+      user.id,
+      verificationToken,
+      new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+    )
+
+    // Log security event
+    await this.repository.logSecurityEvent({
+      userId: user.id,
+      deviceId: device.id,
+      eventType: "USER_REGISTERED",
+      severity: "low",
+      description: "New user registered",
+      ipAddress: request.ipAddress,
+      userAgent: request.userAgent,
+      metadata: {
+        email: request.email,
+        username: request.username,
+      },
+    })
+
+    // In production, send verification email here
+    console.log("Verification token:", verificationToken)
+
+    return {
+      ...tokens,
+      user: User.create(user).toPublicJSON(),
+    }
+  }
+
+  private async generateTokens(user: User, deviceId: string): Promise<TokenPair> {
+    const payload: TokenPayload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      deviceId,
+      sessionId: crypto.randomUUID(),
+    }
+
+    const accessToken = jwt.sign(payload, this.JWT_SECRET, {
+      expiresIn: this.ACCESS_TOKEN_EXPIRES_IN,
+    })
+
+    const refreshToken = jwt.sign(
+      { ...payload, type: "refresh" },
+      this.JWT_REFRESH_SECRET,
+      {
+        expiresIn: this.REFRESH_TOKEN_EXPIRES_IN,
+      },
+    )
+
+    return {
+      accessToken,
+      refreshToken,
+      expiresIn: this.ACCESS_TOKEN_EXPIRES_IN,
+      tokenType: "Bearer",
+    }
+  }
+
+  private isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+  }
+
+  private isStrongPassword(password: string): boolean {
+    return password.length >= 8
+  }
+}

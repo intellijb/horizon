@@ -1,14 +1,14 @@
 import fp from 'fastify-plugin';
 import { FastifyInstance } from 'fastify';
-import { 
+import {
   logger,
   createStructuredLogger,
   structuredLogger,
   requestContext,
   generateCorrelationId,
-  type LogContext 
-} from '@modules/logging';
-import correlationMiddleware from '@modules/logging/middleware';
+  type LogContext
+} from '@modules/platform/logging';
+import correlationMiddleware from '@modules/platform/logging/middleware';
 
 declare module 'fastify' {
   interface FastifyInstance {

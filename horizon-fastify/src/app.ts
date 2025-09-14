@@ -2,7 +2,7 @@ import Fastify, { FastifyInstance } from "fastify"
 import cors from "@fastify/cors"
 import env from "@fastify/env"
 import { config, configSchema, logConfigSummary, isDevelopment, isProduction, loggingConfig, graphqlConfig } from "@config"
-import { logger } from "@modules/logging"
+import { logger } from "@modules/platform/logging"
 import {
   serializerCompiler,
   validatorCompiler,
@@ -18,10 +18,10 @@ import securityPlugin from "@/plugins/security"
 import graphqlPlugin from "@/plugins/graphql"
 
 // Module routes
-import entriesRoutes from "@/modules/entries/routes"
-import attachmentsRoutes from "@/modules/attachments/routes"
-import healthRoutes from "@/modules/health/routes"
-import authRoutes from "@/modules/auth/routes"
+import entriesRoutes from "@/routes/entries.route"
+import attachmentsRoutes from "@/routes/attachments.route"
+import healthRoutes from "@/modules/features/health/routes"
+import authRoutes from "@/routes/auth.route"
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -107,7 +107,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   }
 
   // Register module routes
-  await app.register(authRoutes, { prefix: "/auth" })
+  await app.register(authRoutes)
   await app.register(entriesRoutes, { prefix: "/entries" })
   await app.register(attachmentsRoutes, { prefix: "/attachments" })
   await app.register(healthRoutes, { prefix: "/health" })

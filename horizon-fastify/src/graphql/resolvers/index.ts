@@ -1,5 +1,5 @@
 import { FastifyRequest } from 'fastify';
-import { ConnectionStateManager } from '@modules/connection';
+import { ConnectionStateManager } from '@modules/platform/connection';
 import { DateTimeScalar, GraphQLContext, User, AuthPayload, HealthStatus, SystemInfo } from '@/graphql/types';
 
 // Mock data for demonstration (replace with actual database queries)
