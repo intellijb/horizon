@@ -16,8 +16,8 @@ echo ""
 # Step 1: Shutdown all existing containers
 echo "📦 Step 1: Cleaning up existing Docker containers..."
 echo "---------------------------------------------"
-cd horizon-sse-go && docker-compose down 2>/dev/null
-cd ../horizon-sse && docker-compose down 2>/dev/null
+cd ../go && docker-compose down 2>/dev/null
+cd ../nodejs && docker-compose down 2>/dev/null
 cd ..
 docker ps | grep horizon && docker stop $(docker ps -q --filter name=horizon) 2>/dev/null
 echo "✅ Cleanup complete"
@@ -27,7 +27,7 @@ sleep 2
 # Step 2: Run Go implementation test
 echo "📦 Step 2: Testing Go Implementation"
 echo "---------------------------------------------"
-cd horizon-sse-go
+cd ../go
 echo "Starting Go SSE test with $NUM_CLIENTS clients..."
 ./run.sh "$NUM_CLIENTS" "$RAMP_UP"
 GO_RESULT=$?
@@ -39,8 +39,8 @@ if [ -f test-results.json ]; then
     GO_AVG_TIME=$(jq -r '.summary.avg_response_time' test-results.json 2>/dev/null || echo "N/A")
     GO_TOTAL_MSG=$(jq -r '.summary.total_messages' test-results.json 2>/dev/null || echo "N/A")
     # Copy to comparison-results for dashboard
-    mkdir -p ../comparison-results
-    cp test-results.json ../comparison-results/go-test-results.json
+    mkdir -p ../comparison/comparison-results
+    cp test-results.json ../comparison/comparison-results/go-test-results.json
 else
     GO_SUCCESS="Failed"
     GO_MSG_SEC="N/A"
@@ -58,7 +58,7 @@ sleep 3
 # Step 3: Run Node.js implementation test
 echo "📦 Step 3: Testing Node.js Implementation"
 echo "---------------------------------------------"
-cd horizon-sse
+cd ../nodejs
 echo "Starting Node.js SSE test with $NUM_CLIENTS clients..."
 ./run.sh "$NUM_CLIENTS" "$RAMP_UP"
 NODE_RESULT=$?
@@ -70,8 +70,8 @@ if [ -f test-results.json ]; then
     NODE_AVG_TIME=$(jq -r '.summary.avg_response_time' test-results.json 2>/dev/null || echo "N/A")
     NODE_TOTAL_MSG=$(jq -r '.summary.total_messages' test-results.json 2>/dev/null || echo "N/A")
     # Copy to comparison-results for dashboard
-    mkdir -p ../comparison-results
-    cp test-results.json ../comparison-results/node-test-results.json
+    mkdir -p ../comparison/comparison-results
+    cp test-results.json ../comparison/comparison-results/node-test-results.json
 else
     NODE_SUCCESS="Failed"
     NODE_MSG_SEC="N/A"
@@ -86,8 +86,8 @@ echo "✅ Node.js test complete"
 echo ""
 
 # Update comparison report for dashboard
-if command -v node &> /dev/null && [ -f "analyze.js" ]; then
-    node analyze.js comparison-results > /dev/null 2>&1
+if command -v node &> /dev/null && [ -f "comparison/analyze.js" ]; then
+    node comparison/analyze.js comparison/comparison-results > /dev/null 2>&1
 fi
 
 # Step 4: Display Results
@@ -151,8 +151,8 @@ echo ""
 
 # Offer to view detailed results
 echo "📁 Detailed results available in:"
-echo "   • Go: horizon-sse-go/test-results.json"
-echo "   • Node.js: horizon-sse/test-results.json"
+echo "   • Go: go/test-results.json"
+echo "   • Node.js: nodejs/test-results.json"
 echo ""
 echo "To view interactive dashboard, run: ./view-results.sh"
 echo ""

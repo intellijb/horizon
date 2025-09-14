@@ -21,8 +21,8 @@ mkdir -p "$RESULTS_DIR"
 # Function to clean up Docker containers
 cleanup_docker() {
     echo "🧹 Cleaning up Docker containers..."
-    cd horizon-sse-go && docker-compose down 2>/dev/null
-    cd ../horizon-sse && docker-compose down 2>/dev/null
+    cd ../go && docker-compose down 2>/dev/null
+    cd ../nodejs && docker-compose down 2>/dev/null
     cd ..
     sleep 2
 }

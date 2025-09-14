@@ -84,8 +84,8 @@ show_single_result() {
 
 # Function to display comparison results
 show_comparison() {
-    local go_file="horizon-sse-go/test-results.json"
-    local node_file="horizon-sse/test-results.json"
+    local go_file="../go/test-results.json"
+    local node_file="../nodejs/test-results.json"
     
     # Check if comparison-results exist and are newer
     if [ -f "comparison-results/go-test-results.json" ] && [ -f "comparison-results/node-test-results.json" ]; then
