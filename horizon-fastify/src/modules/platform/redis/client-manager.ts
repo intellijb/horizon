@@ -66,14 +66,19 @@ export class RedisClientManager extends EventEmitter {
   private createRetryStrategy() {
     return (times: number) => {
       this.metrics.reconnectAttempts = times;
-      
+
       if (times > 10) {
         this.emit('maxRetriesExceeded');
         return null; // Stop retrying
       }
-      
+
       const delay = Math.min(times * 1000, 30000);
-      this.emit('retryAttempt', { attempt: times, delay });
+      // Pass the last error if available
+      this.emit('retryAttempt', {
+        attempt: times,
+        delay,
+        error: this.metrics.lastError
+      });
       return delay;
     };
   }

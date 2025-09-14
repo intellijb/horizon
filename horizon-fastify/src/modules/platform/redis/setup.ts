@@ -56,7 +56,8 @@ export function setupRedisManager(options: RedisSetupOptions): RedisSetupResult 
   });
   
   clientManager.on('retryAttempt', ({ attempt, error }) => {
-    logger.warn(`Redis connection attempt ${attempt} failed: ${error.message}`);
+    const errorMessage = error ? error.message : 'Unknown error';
+    logger.warn(`Redis connection attempt ${attempt} failed: ${errorMessage}`);
   });
   
   clientManager.on('close', () => {

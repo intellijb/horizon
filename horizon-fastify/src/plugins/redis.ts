@@ -13,8 +13,24 @@ declare module 'fastify' {
 }
 
 async function redisPlugin(fastify: FastifyInstance) {
+  // Parse Redis URL if provided
+  const redisUrl = redisConfig.url;
+  let redisOptions: any = {};
+
+  if (redisUrl) {
+    // ioredis accepts the URL as the first parameter, not as a property
+    // We'll parse it manually or pass it directly
+    const url = new URL(redisUrl);
+    redisOptions = {
+      host: url.hostname,
+      port: parseInt(url.port || '6379'),
+      password: url.password || undefined,
+      db: parseInt(url.pathname.slice(1) || '0'),
+    };
+  }
+
   const { clientManager, initialize, decorators } = setupRedisManager({
-    ...redisConfig,
+    ...redisOptions,
     maxRetryAttempts: 5,
     retryDelay: 1000,
     enableOfflineQueue: true,
