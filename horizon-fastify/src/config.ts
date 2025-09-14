@@ -1,8 +1,14 @@
 import { z } from 'zod';
-import { config as loadDotenv } from 'dotenv';
 
-// Load .env file immediately at module load time
-loadDotenv();
+// Only load dotenv in development/test environments
+if (process.env.NODE_ENV !== 'production') {
+  try {
+    const { config: loadDotenv } = await import('dotenv');
+    loadDotenv();
+  } catch (e) {
+    // dotenv is not available in production, which is expected
+  }
+}
 
 // Environment validation schema
 const envSchema = z.object({

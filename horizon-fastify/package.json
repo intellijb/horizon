@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "nodemon",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && node scripts/fix-esm-imports.js",
     "start": "node dist/server.js",
     "check": "tsc --noEmit",
     "clean": "rm -rf dist coverage",

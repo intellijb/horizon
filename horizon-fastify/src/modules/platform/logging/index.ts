@@ -49,15 +49,24 @@ function createLoggerConfig() {
   const config: pino.LoggerOptions = {
     level: loggingConfig.level,
     timestamp: pino.stdTimeFunctions.isoTime,
-    formatters: {
-      level: (label) => ({ level: label }),
-    },
     serializers: {
       req: pino.stdSerializers.req,
       res: pino.stdSerializers.res,
       err: pino.stdSerializers.err,
     },
   };
+
+  // Add transport based on environment
+  const transport = createTransport();
+  if (transport) {
+    config.transport = transport;
+    // Don't use custom formatters with transports
+  } else {
+    // Only add custom formatters when not using transports
+    config.formatters = {
+      level: (label) => ({ level: label }),
+    };
+  }
 
   // Add redaction in production or if explicitly enabled
   if (loggingConfig.redactEnabled) {
@@ -67,14 +76,9 @@ function createLoggerConfig() {
     };
   }
 
-  // Add transport based on environment
-  const transport = createTransport();
-  if (transport) {
-    config.transport = transport;
-  }
-
   // Production optimizations
-  if (isProduction) {
+  if (isProduction && !transport) {
+    // Only add formatters when not using transports
     config.formatters = {
       ...config.formatters,
       log: (object) => {
