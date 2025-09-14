@@ -62,7 +62,7 @@ function createLoggerConfig() {
   // Add redaction in production or if explicitly enabled
   if (loggingConfig.redactEnabled) {
     config.redact = {
-      paths: loggingConfig.redactPaths,
+      paths: [...loggingConfig.redactPaths],
       censor: '[REDACTED]',
     };
   }

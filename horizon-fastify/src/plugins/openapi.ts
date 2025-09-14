@@ -10,7 +10,7 @@ async function openApiPlugin(fastify: FastifyInstance) {
   }
 
   // Register Swagger/OpenAPI
-  await fastify.register(swagger, {
+  await fastify.register(swagger as any, {
     openapi: {
       openapi: '3.1.0',
       info: {
@@ -70,7 +70,6 @@ async function openApiPlugin(fastify: FastifyInstance) {
       ],
     },
     hideUntagged: true,
-    exposeRoute: true,
     transform: ({ schema, url }) => {
       // Transform function to customize schema generation
       return { schema, url };

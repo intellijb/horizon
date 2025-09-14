@@ -14,6 +14,7 @@ export interface RefreshTokenResponse {
   refreshToken: string
   expiresIn: number
   tokenType: string
+  user?: any
 }
 
 export class RefreshTokenUseCase {

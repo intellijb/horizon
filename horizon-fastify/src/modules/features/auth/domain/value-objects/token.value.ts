@@ -29,6 +29,8 @@ export interface SecurityEvent {
   userId: string
   deviceId?: string
   eventType: string
+  severity?: string
+  description?: string
   ipAddress?: string
   userAgent?: string
   metadata?: Record<string, any>

@@ -75,7 +75,6 @@ export function createLevelBasedTransport(level: pino.Level): pino.TransportSing
   if (isDevelopment) {
     return {
       target: 'pino-pretty',
-      level,
       options: {
         translateTime: 'HH:MM:ss Z',
         ignore: 'pid,hostname',
@@ -86,7 +85,6 @@ export function createLevelBasedTransport(level: pino.Level): pino.TransportSing
 
   return {
     target: 'pino/file',
-    level,
     options: {
       destination: level === 'error' ? process.stderr.fd : process.stdout.fd,
     },

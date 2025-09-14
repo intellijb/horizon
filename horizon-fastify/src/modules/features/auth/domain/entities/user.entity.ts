@@ -19,6 +19,7 @@ export interface UserEntity {
 export interface UserCreateData {
   email: string
   username?: string
+  password?: string
   passwordHash: string
   firstName?: string
   lastName?: string
@@ -26,6 +27,7 @@ export interface UserCreateData {
 }
 
 export interface UserUpdateData {
+  email?: string
   username?: string
   firstName?: string
   lastName?: string

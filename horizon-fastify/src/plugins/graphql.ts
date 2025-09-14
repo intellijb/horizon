@@ -46,7 +46,7 @@ async function buildContext(request: FastifyRequest): Promise<GraphQLContext> {
 
 async function graphqlPlugin(fastify: FastifyInstance) {
   // Register Mercurius GraphQL plugin
-  await fastify.register(mercurius, {
+  await fastify.register(mercurius as any, {
     schema: typeDefs,
     resolvers,
     context: buildContext,

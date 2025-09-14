@@ -1,6 +1,6 @@
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import * as schema from '@db/schema/index';
+import * as schema from './schema/index';
 import { isDevelopment } from '@config';
 
 export class DrizzleManager {

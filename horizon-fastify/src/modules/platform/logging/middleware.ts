@@ -15,19 +15,7 @@ const CORRELATION_HEADER = "x-correlation-id";
 const REQUEST_ID_HEADER = "x-request-id";
 const TRACE_ID_HEADER = "x-trace-id";
 
-declare module "fastify" {
-  interface FastifyRequest {
-    logger: ReturnType<typeof createStructuredLogger>;
-    requestId: string;
-    correlationId: string;
-    startTime: bigint;
-    user?: {
-      id: string;
-      [key: string]: any;
-    };
-    cookies?: Record<string, string>;
-  }
-}
+// Type declarations moved to src/types/fastify.d.ts
 
 // Extract user context from request
 function extractUserContext(request: FastifyRequest): Partial<LogContext> {
