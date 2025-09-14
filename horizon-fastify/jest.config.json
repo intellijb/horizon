@@ -2,7 +2,7 @@
   "preset": "ts-jest/presets/default-esm",
   "testEnvironment": "node",
   "extensionsToTreatAsEsm": [".ts"],
-  "roots": ["<rootDir>/src", "<rootDir>/tests"],
+  "roots": ["<rootDir>/src"],
   "testMatch": [
     "**/__tests__/**/*.ts",
     "**/?(*.)+(spec|test).ts"
@@ -25,7 +25,7 @@
     "^@modules/(.*)$": "<rootDir>/src/modules/$1",
     "^@config$": "<rootDir>/src/config",
     "^@db/(.*)$": "<rootDir>/src/db/$1",
-    "^@test/(.*)$": "<rootDir>/tests/$1"
+    "^@test/(.*)$": "<rootDir>/src/tests/$1"
   },
   "collectCoverageFrom": [
     "src/**/*.ts",
@@ -38,7 +38,7 @@
   ],
   "coverageDirectory": "coverage",
   "coverageReporters": ["text", "lcov", "html"],
-  "setupFilesAfterEnv": [],
+  "setupFilesAfterEnv": ["<rootDir>/src/tests/setup.ts"],
   "testTimeout": 10000,
   "verbose": true,
   "clearMocks": true,

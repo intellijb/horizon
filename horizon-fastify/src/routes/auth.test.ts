@@ -6,83 +6,17 @@ import {
   afterAll,
   beforeEach,
 } from "@jest/globals";
-import { FastifyInstance } from "fastify";
-
-// TODO: Create test helpers when needed
-// Mock test helpers for now
-const createTestApp = async (): Promise<FastifyInstance> => {
-  // Mock implementation - replace with actual test app creation
-  return {} as FastifyInstance;
-};
-
-const closeTestApp = async (app: FastifyInstance): Promise<void> => {
-  // Mock implementation
-};
-
-const testData = {
-  user: () => ({
-    email: `test${Date.now()}@example.com`,
-    password: "TestPassword123!",
-    username: `testuser${Date.now()}`,
-  }),
-  validPassword: () => "TestPassword123!",
-  expiredJwt: () =>
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyMzkwMjJ9.4Adcj3UFYzPUVaVF43FmMab6RlaQD8A9V8wFzzht-KQ",
-};
-
-const authHelpers = {
-  register: async (app: FastifyInstance, data: any) => {
-    // Mock implementation
-    return { statusCode: 201 };
-  },
-  login: async (app: FastifyInstance, data: any) => {
-    // Mock implementation
-    return { statusCode: 200, body: { accessToken: "mock-token" } };
-  },
-  registerTestUser: async (app: FastifyInstance, data: any) => {
-    // Mock implementation - registers and returns auth tokens
-    return {
-      statusCode: 201,
-      body: {
-        accessToken: "mock-access-token",
-        refreshToken: "mock-refresh-token",
-        user: data,
-      },
-    };
-  },
-};
-
-const assertions = {
-  hasAuthTokens: (response: any) => {
-    // Mock implementation
-  },
-  hasUserData: (response: any) => {
-    // Mock implementation
-  },
-  expectAuthResponse: (response: any) => {
-    // Mock implementation - validates auth response structure
-  },
-  expectErrorResponse: (
-    response: any,
-    statusCode?: number | string,
-    message?: string
-  ) => {
-    // Mock implementation - validates error response
-    // statusCode can be either a number or a string to check in the message
-  },
-  expectUser: (response: any) => {
-    // Mock implementation - validates user object structure
-  },
-};
-
-const dbHelpers = {
-  cleanupTestData: async (app: FastifyInstance, emails: string[]) => {
-    // Mock implementation
-  },
-};
+import {
+  createTestApp,
+  closeTestApp,
+  testData,
+  authHelpers,
+  assertions,
+  dbHelpers,
+} from "@test/utils/test-helpers";
 
 describe("Auth Routes Integration Tests", () => {
-  let app: FastifyInstance;
+  let app: any;
   let testEmails: string[] = [];
 
   beforeAll(async () => {

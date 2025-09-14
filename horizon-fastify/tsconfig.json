@@ -11,7 +11,8 @@
       "@/*": ["*"],
       "@modules/*": ["modules/*"],
       "@config": ["config"],
-      "@db/*": ["db/*"]
+      "@db/*": ["db/*"],
+      "@test/*": ["tests/*"]
     },
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
@@ -24,7 +25,7 @@
     "noEmit": false,
     "isolatedModules": true,
     "allowSyntheticDefaultImports": true,
-    "types": ["node"],
+    "types": ["node", "jest"],
     "strict": false,
     "strictNullChecks": true
   },

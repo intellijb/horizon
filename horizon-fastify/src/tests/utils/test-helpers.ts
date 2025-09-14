@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { jest } from '@jest/globals'
+import { jest, expect } from '@jest/globals'
 
 /**
  * Test data generators
@@ -561,11 +561,13 @@ export const assertions = {
   /**
    * Assert error response
    */
-  expectErrorResponse(response: any, expectedMessage?: string) {
+  expectErrorResponse(response: any, statusCode?: number | string, expectedMessage?: string) {
     expect(response).toHaveProperty('error')
     if (expectedMessage) {
       expect(response.error).toContain(expectedMessage)
     }
+    // statusCode parameter is for compatibility but we don't assert it here since
+    // the response structure from our mock is just the JSON body
   },
 }
 

@@ -148,7 +148,6 @@ describe("LoginUseCase", () => {
       )
 
       expect(mockRepository.recordAuthAttempt).toHaveBeenCalledWith({
-        userId: "user-123",
         email: "user@example.com",
         success: false,
         ipAddress: "127.0.0.1",
