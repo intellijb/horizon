@@ -1,0 +1,33 @@
+services:
+  migrate:
+    image: ghcr.io/intellijb/horizon-fastify:latest
+    container_name: horizon_migrate
+    env_file: .env.production
+    environment:
+      POSTGRES_URI: postgresql://horizon:${POSTGRES_PASSWORD}@postgres:5432/horizon
+      DATABASE_URL: postgresql://horizon:${POSTGRES_PASSWORD}@postgres:5432/horizon
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [horizon_network]
+    command: npm run db:migrate
+    restart: "no"
+
+  seed:
+    image: ghcr.io/intellijb/horizon-fastify:latest
+    container_name: horizon_seed
+    env_file: .env.production
+    environment:
+      POSTGRES_URI: postgresql://horizon:${POSTGRES_PASSWORD}@postgres:5432/horizon
+      DATABASE_URL: postgresql://horizon:${POSTGRES_PASSWORD}@postgres:5432/horizon
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [horizon_network]
+    command: npm run db:seed
+    restart: "no"
+
+networks:
+  horizon_network:
+    external: true
+    name: horizon_network

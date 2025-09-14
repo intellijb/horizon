@@ -47,6 +47,8 @@ RUN adduser --system --uid 1001 fastify
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./package.json
+# Copy migration files
+COPY src/modules/platform/database/migrations ./dist/modules/platform/database/migrations
 
 # Change ownership to fastify user
 RUN chown -R fastify:nodejs /app
