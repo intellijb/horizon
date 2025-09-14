@@ -24,7 +24,7 @@ export const SecurityEventTypes = {
   LOGIN_SUCCESS: "login",
   LOGIN_FAILED: "login_failed",
   LOGOUT: "logout",
-  USER_REGISTERED: "account_reactivated",
+  USER_REGISTERED: "account_reactivated", // Use existing enum value that makes sense for new user
   ACCOUNT_INACTIVE_LOGIN: "login_failed",
   PASSWORD_RESET_REQUESTED: "password_reset_request",
   PASSWORD_RESET_COMPLETED: "password_reset_complete",

@@ -6,24 +6,7 @@ import cookie from "@fastify/cookie"
 import cors from "@fastify/cors"
 import sensible from "@fastify/sensible"
 
-declare module "fastify" {
-  interface FastifyInstance {
-    authenticate: (
-      request: FastifyRequest,
-      reply: FastifyReply,
-    ) => Promise<void>
-    verifyOptionalAuth: (
-      request: FastifyRequest,
-      reply: FastifyReply,
-    ) => Promise<void>
-  }
-  interface FastifyRequest {
-    user?: {
-      id: string
-      [key: string]: any
-    }
-  }
-}
+// Type declarations moved to src/types/fastify.d.ts
 
 async function securityPlugin(fastify: FastifyInstance) {
   // Register sensible for httpErrors
@@ -82,7 +65,7 @@ async function securityPlugin(fastify: FastifyInstance) {
         await request.jwtVerify()
       } catch (err) {
         // Silent fail - user is not authenticated but request continues
-        request.user = undefined
+        delete (request as any).user
       }
     },
   )

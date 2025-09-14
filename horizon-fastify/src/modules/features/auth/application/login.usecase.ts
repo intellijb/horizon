@@ -82,8 +82,6 @@ export class LoginUseCase {
       await this.logSecurityEvent(
         user.id,
         SecurityEventTypes.ACCOUNT_INACTIVE_LOGIN,
-        SecurityEventSeverity.MEDIUM,
-        `Login attempt for inactive account: ${email}`,
         request,
       )
       throw new AuthError(
@@ -106,7 +104,7 @@ export class LoginUseCase {
     const tokens = this.tokenService.generateTokenPair({
       userId: user.id,
       email: user.email,
-      role: user.role,
+      role: "user", // Default role since schema doesn't store roles
       deviceId: device.id,
       sessionId: this.tokenService.generateSessionId(),
     })
@@ -132,8 +130,6 @@ export class LoginUseCase {
       userId: user.id,
       deviceId: device.id,
       eventType: SecurityEventTypes.LOGIN_SUCCESS,
-      severity: SecurityEventSeverity.LOW,
-      description: "User logged in successfully",
       ipAddress: request.ipAddress,
       userAgent: request.userAgent,
     })
@@ -156,15 +152,11 @@ export class LoginUseCase {
   private async logSecurityEvent(
     userId: string,
     eventType: string,
-    severity: string,
-    description: string,
     request: LoginRequest,
   ): Promise<void> {
     await this.repository.logSecurityEvent({
       userId,
       eventType,
-      severity: severity as any,
-      description,
       ipAddress: request.ipAddress,
       userAgent: request.userAgent,
     })

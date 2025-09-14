@@ -1,4 +1,4 @@
-import { eq, and, isNull, sql, or } from "drizzle-orm"
+import { eq, and, isNull, sql, or, SQL } from "drizzle-orm"
 import { NodePgDatabase } from "drizzle-orm/node-postgres"
 import { entries, attachments } from "@modules/platform/database/schema"
 import * as schema from "@modules/platform/database/schema"
@@ -108,7 +108,8 @@ export class EntriesRepositoryDrizzle implements EntriesRepositoryPort {
   }
 
   async listEntries(filter: ListEntriesFilter): Promise<PaginatedResult<Entry>> {
-    const conditions = []
+    // Build where conditions
+    const conditions: SQL<unknown>[] = []
 
     if (!filter.includeDeleted) {
       conditions.push(isNull(entries.deletedAt))
@@ -118,22 +119,35 @@ export class EntriesRepositoryDrizzle implements EntriesRepositoryPort {
       conditions.push(eq(entries.type, filter.type))
     }
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined
+    const baseCondition = conditions.length > 0 ? and(...conditions) : undefined
 
     // Get total count
-    const [{ count }] = await this.db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(entries)
-      .where(whereClause)
+    const countResults = baseCondition
+      ? await this.db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(entries)
+          .where(baseCondition)
+      : await this.db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(entries)
+
+    const { count } = countResults[0]
 
     // Get paginated results
-    const results = await this.db
-      .select()
-      .from(entries)
-      .where(whereClause)
-      .limit(filter.limit || 20)
-      .offset(filter.offset || 0)
-      .orderBy(entries.createdAt)
+    const results = baseCondition
+      ? await this.db
+          .select()
+          .from(entries)
+          .where(baseCondition)
+          .limit(filter.limit || 20)
+          .offset(filter.offset || 0)
+          .orderBy(entries.createdAt)
+      : await this.db
+          .select()
+          .from(entries)
+          .limit(filter.limit || 20)
+          .offset(filter.offset || 0)
+          .orderBy(entries.createdAt)
 
     const items = results.map(entry =>
       Entry.create({
@@ -206,28 +220,44 @@ export class EntriesRepositoryDrizzle implements EntriesRepositoryPort {
   }
 
   async listAttachments(filter: ListAttachmentsFilter): Promise<PaginatedResult<Attachment>> {
-    const conditions = []
+    const conditions: SQL<unknown>[] = []
 
     if (filter.entryId) {
-      conditions.push(eq(attachments.entryId, filter.entryId))
+      const entryCondition = eq(attachments.entryId, filter.entryId)
+      if (entryCondition) {
+        conditions.push(entryCondition)
+      }
     }
 
+    // Get total count
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
-    // Get total count
-    const [{ count }] = await this.db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(attachments)
-      .where(whereClause)
+    const countResults = whereClause
+      ? await this.db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(attachments)
+          .where(whereClause)
+      : await this.db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(attachments)
+
+    const { count } = countResults[0]
 
     // Get paginated results
-    const results = await this.db
-      .select()
-      .from(attachments)
-      .where(whereClause)
-      .limit(filter.limit || 20)
-      .offset(filter.offset || 0)
-      .orderBy(attachments.createdAt)
+    const results = whereClause
+      ? await this.db
+          .select()
+          .from(attachments)
+          .where(whereClause)
+          .limit(filter.limit || 20)
+          .offset(filter.offset || 0)
+          .orderBy(attachments.createdAt)
+      : await this.db
+          .select()
+          .from(attachments)
+          .limit(filter.limit || 20)
+          .offset(filter.offset || 0)
+          .orderBy(attachments.createdAt)
 
     const items = results.map(attachment =>
       Attachment.create({

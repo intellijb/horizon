@@ -60,7 +60,7 @@ export class RegisterUseCase {
     const user = await this.repository.createUser({
       email: request.email,
       username: request.username,
-      password: passwordHash,
+      passwordHash: passwordHash,
     })
 
     // Create device
@@ -94,8 +94,6 @@ export class RegisterUseCase {
       userId: user.id,
       deviceId: device.id,
       eventType: SecurityEventTypes.USER_REGISTERED,
-      severity: "low",
-      description: "New user registered",
       ipAddress: request.ipAddress,
       userAgent: request.userAgent,
       metadata: {
@@ -117,7 +115,7 @@ export class RegisterUseCase {
     const payload: TokenPayload = {
       userId: user.id,
       email: user.email,
-      role: user.role,
+      role: "user", // Default role since schema doesn't store roles
       deviceId,
       sessionId: crypto.randomUUID(),
     }

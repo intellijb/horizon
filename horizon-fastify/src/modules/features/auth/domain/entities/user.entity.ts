@@ -5,9 +5,6 @@ export interface UserEntity {
   email: string
   username: string | null
   passwordHash?: string
-  firstName?: string | null
-  lastName?: string | null
-  role: "user" | "admin"
   isActive: boolean
   emailVerified: boolean
   mfaEnabled: boolean
@@ -19,19 +16,11 @@ export interface UserEntity {
 export interface UserCreateData {
   email: string
   username?: string
-  password?: string
   passwordHash: string
-  firstName?: string
-  lastName?: string
-  role?: "user" | "admin"
 }
 
 export interface UserUpdateData {
-  email?: string
   username?: string
-  firstName?: string
-  lastName?: string
-  role?: "user" | "admin"
   isActive?: boolean
   emailVerified?: boolean
   mfaEnabled?: boolean
@@ -44,9 +33,6 @@ export class User implements UserEntity {
     public email: string,
     public username: string | null,
     public passwordHash: string | undefined,
-    public firstName: string | null | undefined,
-    public lastName: string | null | undefined,
-    public role: "user" | "admin",
     public isActive: boolean,
     public emailVerified: boolean,
     public mfaEnabled: boolean,
@@ -61,9 +47,6 @@ export class User implements UserEntity {
       data.email,
       data.username,
       data.passwordHash,
-      data.firstName,
-      data.lastName,
-      data.role,
       data.isActive,
       data.emailVerified,
       data.mfaEnabled,
@@ -78,9 +61,6 @@ export class User implements UserEntity {
     email: string
     username?: string
     passwordHash: string
-    firstName?: string
-    lastName?: string
-    role?: "user" | "admin"
   }): User {
     const now = new Date()
     return new User(
@@ -88,9 +68,6 @@ export class User implements UserEntity {
       data.email,
       data.username || null,
       data.passwordHash,
-      data.firstName || null,
-      data.lastName || null,
-      data.role || AuthConstants.DEFAULT_ROLE,
       true, // isActive
       false, // emailVerified
       false, // mfaEnabled
@@ -105,9 +82,6 @@ export class User implements UserEntity {
       id: this.id,
       email: this.email,
       username: this.username,
-      firstName: this.firstName,
-      lastName: this.lastName,
-      role: this.role,
       isActive: this.isActive,
       emailVerified: this.emailVerified,
       mfaEnabled: this.mfaEnabled,

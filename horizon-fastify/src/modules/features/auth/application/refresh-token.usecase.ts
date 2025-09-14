@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken"
 import crypto from "crypto"
 import { AuthRepositoryPort } from "../domain/ports/auth-repository.port"
 import { TokenPair, TokenPayload } from "../domain/value-objects/token.value"
+import { SecurityEventTypes } from "../constants/auth.constants"
 
 export interface RefreshTokenRequest {
   refreshToken: string
@@ -48,9 +49,7 @@ export class RefreshTokenUseCase {
       await this.repository.logSecurityEvent({
         userId: payload.userId,
         deviceId: payload.deviceId || null,
-        eventType: "token_revoked",
-        severity: "high",
-        description: "Attempted to use a revoked refresh token",
+        eventType: SecurityEventTypes.TOKEN_REVOKED,
         ipAddress: request.ipAddress,
         userAgent: request.userAgent,
       })
@@ -79,7 +78,7 @@ export class RefreshTokenUseCase {
     const newPayload: TokenPayload = {
       userId: user.id,
       email: user.email,
-      role: user.role,
+      role: "user", // Default role since schema doesn't store roles
       deviceId: payload.deviceId,
       sessionId: crypto.randomUUID(),
     }

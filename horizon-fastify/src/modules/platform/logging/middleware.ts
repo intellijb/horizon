@@ -22,8 +22,8 @@ function extractUserContext(request: FastifyRequest): Partial<LogContext> {
   const context: Partial<LogContext> = {};
 
   // Extract user ID from JWT payload if available
-  if (request.user?.id) {
-    context.userId = request.user.id;
+  if (request.user && typeof request.user === 'object' && 'id' in request.user) {
+    context.userId = (request.user as any).id;
   }
 
   // Extract session ID from headers or cookies

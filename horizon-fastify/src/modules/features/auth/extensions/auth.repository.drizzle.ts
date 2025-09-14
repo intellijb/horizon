@@ -1,4 +1,4 @@
-import { eq, and, desc, gte, lte, or, like, sql, isNull } from "drizzle-orm"
+import { eq, and, desc, gte, lte, or, like, sql, isNull, isNotNull, SQL } from "drizzle-orm"
 import { NodePgDatabase } from "drizzle-orm/node-postgres"
 import crypto from "crypto"
 import bcrypt from "bcrypt"
@@ -57,7 +57,7 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
       .values({
         email: data.email,
         username: data.username || null,
-        passwordHash: data.password, // Password should already be hashed
+        passwordHash: data.passwordHash, // Password should already be hashed
         emailVerified: false,
         isActive: true,
         mfaEnabled: false,
@@ -71,10 +71,11 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
     const [user] = await this.db
       .update(users)
       .set({
-        ...(data.email && { email: data.email }),
         ...(data.username && { username: data.username }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
         ...(data.emailVerified !== undefined && { emailVerified: data.emailVerified }),
+        ...(data.mfaEnabled !== undefined && { mfaEnabled: data.mfaEnabled }),
+        ...(data.mfaSecret !== undefined && { mfaSecret: data.mfaSecret }),
         updatedAt: new Date(),
       })
       .where(eq(users.id, id))
@@ -91,19 +92,25 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
     page: number
     limit: number
     search?: string
-    role?: string
     isActive?: boolean
     emailVerified?: boolean
   }): Promise<{ data: User[]; total: number; page: number; limit: number }> {
-    const conditions = []
+    const offset = (options.page - 1) * options.limit
+
+    // Build where conditions
+    const conditions: SQL<unknown>[] = []
 
     if (options.search) {
-      conditions.push(
-        or(
-          like(users.email, `%${options.search}%`),
-          like(users.username, `%${options.search}%`),
-        ),
+      const searchCondition = or(
+        like(users.email, `%${options.search}%`),
+        and(
+          isNotNull(users.username),
+          like(users.username, `%${options.search}%`)
+        )
       )
+      if (searchCondition) {
+        conditions.push(searchCondition)
+      }
     }
 
     if (options.isActive !== undefined) {
@@ -114,21 +121,33 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
       conditions.push(eq(users.emailVerified, options.emailVerified))
     }
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined
-    const offset = (options.page - 1) * options.limit
+    const baseCondition = conditions.length > 0 ? and(...conditions) : undefined
 
-    const [totalResult] = await this.db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(users)
-      .where(whereClause)
+    const totalResults = baseCondition
+      ? await this.db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(users)
+          .where(baseCondition)
+      : await this.db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(users)
 
-    const results = await this.db
-      .select()
-      .from(users)
-      .where(whereClause)
-      .orderBy(desc(users.createdAt))
-      .limit(options.limit)
-      .offset(offset)
+    const totalResult = totalResults[0]
+
+    const results = baseCondition
+      ? await this.db
+          .select()
+          .from(users)
+          .where(baseCondition)
+          .orderBy(desc(users.createdAt))
+          .limit(options.limit)
+          .offset(offset)
+      : await this.db
+          .select()
+          .from(users)
+          .orderBy(desc(users.createdAt))
+          .limit(options.limit)
+          .offset(offset)
 
     return {
       data: results.map((user) => this.mapToUser(user)),
@@ -145,7 +164,7 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
     token: string
     expiresAt: Date
   }): Promise<RefreshTokenData> {
-    const [token] = await this.db
+    const refreshTokenRows = await this.db
       .insert(refreshTokens)
       .values({
         userId: data.userId,
@@ -156,7 +175,7 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
       })
       .returning()
 
-    return this.mapToRefreshToken(token)
+    return this.mapToRefreshToken(refreshTokenRows[0])
   }
 
   async findRefreshToken(token: string): Promise<RefreshTokenData | null> {
@@ -301,7 +320,7 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
     await this.db.insert(securityEvents).values({
       userId: event.userId,
       deviceId: event.deviceId || null,
-      eventType: event.eventType,
+      eventType: event.eventType as any, // Cast to avoid enum mismatch
       ipAddress: event.ipAddress || null,
       userAgent: event.userAgent || null,
       metadata: event.metadata || null,
@@ -317,7 +336,10 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
     startDate?: string
     endDate?: string
   }): Promise<{ data: SecurityEvent[]; total: number; page: number; limit: number }> {
-    const conditions = []
+    const offset = (options.page - 1) * options.limit
+
+    // Build where conditions
+    const conditions: SQL<unknown>[] = []
 
     if (options.userId) {
       conditions.push(eq(securityEvents.userId, options.userId))
@@ -328,9 +350,8 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
     }
 
     if (options.eventType) {
-      conditions.push(eq(securityEvents.eventType, options.eventType))
+      conditions.push(eq(securityEvents.eventType, options.eventType as any))
     }
-
 
     if (options.startDate) {
       conditions.push(gte(securityEvents.createdAt, new Date(options.startDate)))
@@ -340,21 +361,33 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
       conditions.push(lte(securityEvents.createdAt, new Date(options.endDate)))
     }
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined
-    const offset = (options.page - 1) * options.limit
+    const baseCondition = conditions.length > 0 ? and(...conditions) : undefined
 
-    const [totalResult] = await this.db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(securityEvents)
-      .where(whereClause)
+    const totalResults = baseCondition
+      ? await this.db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(securityEvents)
+          .where(baseCondition)
+      : await this.db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(securityEvents)
 
-    const results = await this.db
-      .select()
-      .from(securityEvents)
-      .where(whereClause)
-      .orderBy(desc(securityEvents.createdAt))
-      .limit(options.limit)
-      .offset(offset)
+    const totalResult = totalResults[0]
+
+    const results = baseCondition
+      ? await this.db
+          .select()
+          .from(securityEvents)
+          .where(baseCondition)
+          .orderBy(desc(securityEvents.createdAt))
+          .limit(options.limit)
+          .offset(offset)
+      : await this.db
+          .select()
+          .from(securityEvents)
+          .orderBy(desc(securityEvents.createdAt))
+          .limit(options.limit)
+          .offset(offset)
 
     return {
       data: results.map((event) => this.mapToSecurityEvent(event)),
@@ -466,9 +499,6 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
       email: data.email,
       username: data.username,
       passwordHash: includePassword ? data.passwordHash : undefined,
-      firstName: null, // Schema doesn't have firstName
-      lastName: null,  // Schema doesn't have lastName
-      role: "user",    // Schema doesn't have role, default to user
       isActive: data.isActive,
       emailVerified: data.emailVerified,
       mfaEnabled: data.mfaEnabled,
@@ -497,8 +527,8 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
       userId: data.userId,
       name: data.deviceName, // Schema uses deviceName
       deviceType: data.deviceType,
-      userAgent: null, // Schema doesn't store userAgent in devices
-      ipAddress: null, // Schema doesn't store ipAddress in devices
+      userAgent: undefined, // Schema doesn't store userAgent in devices
+      ipAddress: undefined, // Schema doesn't store ipAddress in devices
       lastActive: data.lastSeenAt, // Schema uses lastSeenAt
       isTrusted: data.trusted,
       createdAt: data.createdAt,
