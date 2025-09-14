@@ -47,7 +47,7 @@ export class RefreshTokenUseCase {
       await this.repository.logSecurityEvent({
         userId: payload.userId,
         deviceId: payload.deviceId || null,
-        eventType: "REVOKED_TOKEN_USE",
+        eventType: "token_revoked",
         severity: "high",
         description: "Attempted to use a revoked refresh token",
         ipAddress: request.ipAddress,
@@ -120,6 +120,7 @@ export class RefreshTokenUseCase {
       refreshToken,
       expiresIn: this.ACCESS_TOKEN_EXPIRES_IN,
       tokenType: "Bearer",
+      user: user.toPublicJSON(),
     }
   }
 }

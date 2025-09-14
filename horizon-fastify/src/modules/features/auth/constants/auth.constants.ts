@@ -25,6 +25,7 @@ export const SecurityEventTypes = {
   LOGIN_FAILED: "login_failed",
   LOGOUT: "logout",
   USER_REGISTERED: "account_reactivated",
+  ACCOUNT_INACTIVE_LOGIN: "login_failed",
   PASSWORD_RESET_REQUESTED: "password_reset_request",
   PASSWORD_RESET_COMPLETED: "password_reset_complete",
   PASSWORD_CHANGED: "password_change",

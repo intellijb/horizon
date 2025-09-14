@@ -4,6 +4,7 @@ import crypto from "crypto"
 import { AuthRepositoryPort } from "../domain/ports/auth-repository.port"
 import { User } from "../domain/entities/user.entity"
 import { TokenPair, TokenPayload } from "../domain/value-objects/token.value"
+import { SecurityEventTypes } from "../constants/auth.constants"
 
 export interface RegisterRequest {
   email: string
@@ -92,7 +93,7 @@ export class RegisterUseCase {
     await this.repository.logSecurityEvent({
       userId: user.id,
       deviceId: device.id,
-      eventType: "USER_REGISTERED",
+      eventType: SecurityEventTypes.USER_REGISTERED,
       severity: "low",
       description: "New user registered",
       ipAddress: request.ipAddress,
