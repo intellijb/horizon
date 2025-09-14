@@ -17,6 +17,13 @@ import {
   ResetPasswordRequest,
   ChangePasswordRequest,
   VerifyEmailRequest,
+  loginSchema,
+  registerSchema,
+  refreshTokenSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  changePasswordSchema,
+  verifyEmailSchema,
   authResponseSchema,
   errorResponseSchema,
   messageResponseSchema,
@@ -40,17 +47,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       tags: ["Authentication"],
       summary: "Register new user",
       description: "Create a new user account",
-      body: {
-        type: "object",
-        required: ["email", "password", "username"],
-        properties: {
-          email: { type: "string", format: "email" },
-          password: { type: "string", minLength: 8 },
-          username: { type: "string", minLength: 3 },
-          firstName: { type: "string" },
-          lastName: { type: "string" },
-        },
-      },
+      body: registerSchema,
       response: {
         201: authResponseSchema,
         400: errorResponseSchema,
@@ -81,15 +78,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       tags: ["Authentication"],
       summary: "Login",
       description: "Authenticate user and get tokens",
-      body: {
-        type: "object",
-        required: ["email", "password"],
-        properties: {
-          email: { type: "string", format: "email" },
-          password: { type: "string" },
-          deviceName: { type: "string" },
-        },
-      },
+      body: loginSchema,
       response: {
         200: authResponseSchema,
         401: errorResponseSchema,
@@ -124,13 +113,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       tags: ["Authentication"],
       summary: "Refresh token",
       description: "Get new access token using refresh token",
-      body: {
-        type: "object",
-        required: ["refreshToken"],
-        properties: {
-          refreshToken: { type: "string" },
-        },
-      },
+      body: refreshTokenSchema,
       response: {
         200: authResponseSchema,
         401: errorResponseSchema,
@@ -196,13 +179,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       tags: ["Authentication"],
       summary: "Forgot password",
       description: "Request password reset token",
-      body: {
-        type: "object",
-        required: ["email"],
-        properties: {
-          email: { type: "string", format: "email" },
-        },
-      },
+      body: forgotPasswordSchema,
       response: {
         200: messageResponseSchema,
       },
@@ -232,14 +209,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       tags: ["Authentication"],
       summary: "Reset password",
       description: "Reset password using token",
-      body: {
-        type: "object",
-        required: ["token", "password"],
-        properties: {
-          token: { type: "string" },
-          password: { type: "string", minLength: 8 },
-        },
-      },
+      body: resetPasswordSchema,
       response: {
         200: messageResponseSchema,
         400: errorResponseSchema,
@@ -279,14 +249,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       tags: ["Authentication"],
       summary: "Change password",
       description: "Change password for authenticated user",
-      body: {
-        type: "object",
-        required: ["currentPassword", "newPassword"],
-        properties: {
-          currentPassword: { type: "string" },
-          newPassword: { type: "string", minLength: 8 },
-        },
-      },
+      body: changePasswordSchema,
       response: {
         200: messageResponseSchema,
         401: errorResponseSchema,
@@ -326,13 +289,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       tags: ["Authentication"],
       summary: "Verify email",
       description: "Verify email address using token",
-      body: {
-        type: "object",
-        required: ["token"],
-        properties: {
-          token: { type: "string" },
-        },
-      },
+      body: verifyEmailSchema,
       response: {
         200: messageResponseSchema,
         400: errorResponseSchema,

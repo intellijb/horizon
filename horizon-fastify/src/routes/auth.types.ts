@@ -1,106 +1,99 @@
-// Request type definitions for auth routes
+import { z } from "zod"
+
+// Zod schemas for request validation
+export const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+  deviceName: z.string().optional(),
+})
+
+export const registerSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  username: z.string().min(3).optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+})
+
+export const refreshTokenSchema = z.object({
+  refreshToken: z.string(),
+})
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+})
+
+export const resetPasswordSchema = z.object({
+  token: z.string(),
+  password: z.string().min(8),
+})
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string(),
+  newPassword: z.string().min(8),
+})
+
+export const verifyEmailSchema = z.object({
+  token: z.string(),
+})
+
+// Response schemas
+export const userSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  username: z.string().nullable(),
+  firstName: z.string().nullable(),
+  lastName: z.string().nullable(),
+  role: z.string(),
+  isActive: z.boolean(),
+  emailVerified: z.boolean(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+})
+
+export const authResponseSchema = z.object({
+  accessToken: z.string(),
+  refreshToken: z.string(),
+  expiresIn: z.number(),
+  tokenType: z.string(),
+  user: userSchema,
+})
+
+export const errorResponseSchema = z.object({
+  error: z.string(),
+})
+
+export const messageResponseSchema = z.object({
+  message: z.string(),
+})
+
+export const userProfileSchema = userSchema
+
+// Type definitions for FastifyRequest
 export interface LoginRequest {
-  Body: {
-    email: string
-    password: string
-    deviceName?: string
-  }
+  Body: z.infer<typeof loginSchema>
 }
 
 export interface RegisterRequest {
-  Body: {
-    email: string
-    password: string
-    username?: string
-    firstName?: string
-    lastName?: string
-  }
+  Body: z.infer<typeof registerSchema>
 }
 
 export interface RefreshTokenRequest {
-  Body: {
-    refreshToken: string
-  }
+  Body: z.infer<typeof refreshTokenSchema>
 }
 
 export interface ForgotPasswordRequest {
-  Body: {
-    email: string
-  }
+  Body: z.infer<typeof forgotPasswordSchema>
 }
 
 export interface ResetPasswordRequest {
-  Body: {
-    token: string
-    password: string
-  }
+  Body: z.infer<typeof resetPasswordSchema>
 }
 
 export interface ChangePasswordRequest {
-  Body: {
-    currentPassword: string
-    newPassword: string
-  }
+  Body: z.infer<typeof changePasswordSchema>
 }
 
 export interface VerifyEmailRequest {
-  Body: {
-    token: string
-  }
+  Body: z.infer<typeof verifyEmailSchema>
 }
-
-// OpenAPI schemas for documentation
-export const authResponseSchema = {
-  type: "object",
-  properties: {
-    accessToken: { type: "string" },
-    refreshToken: { type: "string" },
-    expiresIn: { type: "number" },
-    tokenType: { type: "string" },
-    user: {
-      type: "object",
-      properties: {
-        id: { type: "string" },
-        email: { type: "string" },
-        username: { type: "string" },
-        firstName: { type: "string" },
-        lastName: { type: "string" },
-        role: { type: "string" },
-        isActive: { type: "boolean" },
-        emailVerified: { type: "boolean" },
-        createdAt: { type: "string", format: "date-time" },
-        updatedAt: { type: "string", format: "date-time" },
-      },
-    },
-  },
-} as const
-
-export const errorResponseSchema = {
-  type: "object",
-  properties: {
-    error: { type: "string" },
-  },
-} as const
-
-export const messageResponseSchema = {
-  type: "object",
-  properties: {
-    message: { type: "string" },
-  },
-} as const
-
-export const userProfileSchema = {
-  type: "object",
-  properties: {
-    id: { type: "string" },
-    email: { type: "string" },
-    username: { type: "string" },
-    firstName: { type: "string" },
-    lastName: { type: "string" },
-    role: { type: "string" },
-    isActive: { type: "boolean" },
-    emailVerified: { type: "boolean" },
-    createdAt: { type: "string", format: "date-time" },
-    updatedAt: { type: "string", format: "date-time" },
-  },
-} as const
