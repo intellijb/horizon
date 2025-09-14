@@ -3,6 +3,8 @@ import {
   EntriesError,
   AttachmentsController,
   attachmentsSchemas,
+  entriesResponseSchemas,
+  entriesErrorResponseSchema,
   CreateAttachmentBody,
   AttachmentParams,
   ListAttachmentsQuery,
@@ -28,7 +30,11 @@ export default async function attachmentsRoutes(fastify: FastifyInstance) {
     description: "Get a paginated list of attachments",
   })
     .withQuery(attachmentsSchemas.listAttachmentsQuery)
-    .withResponses(commonResponses.successWithError())
+    .withResponses({
+      200: entriesResponseSchemas.attachmentList,
+      400: entriesErrorResponseSchema,
+      401: entriesErrorResponseSchema,
+    })
     .handle(async (request: ListAttachmentsRequest) => {
       const { limit, offset, entryId } = request.query as ListAttachmentsQuery
       return await controller.listAttachments({ limit, offset, entryId })
@@ -40,7 +46,12 @@ export default async function attachmentsRoutes(fastify: FastifyInstance) {
     description: "Get a single attachment by its ID",
   })
     .withParams(attachmentsSchemas.attachmentParams)
-    .withResponses(commonResponses.successWithErrorAndNotFound())
+    .withResponses({
+      200: entriesResponseSchemas.attachment,
+      400: entriesErrorResponseSchema,
+      401: entriesErrorResponseSchema,
+      404: entriesErrorResponseSchema,
+    })
     .handle(async (request: GetAttachmentRequest) => {
       const { id } = request.params as AttachmentParams
       return await controller.getAttachmentById(id)
@@ -52,7 +63,11 @@ export default async function attachmentsRoutes(fastify: FastifyInstance) {
     description: "Create a new attachment for an entry",
   })
     .withBody(attachmentsSchemas.createAttachmentBody)
-    .withResponses(commonResponses.createdWithError())
+    .withResponses({
+      201: entriesResponseSchemas.attachment,
+      400: entriesErrorResponseSchema,
+      401: entriesErrorResponseSchema,
+    })
     .handle(async (request: CreateAttachmentRequest) => {
       const { entryId, data, mimeType } = request.body as CreateAttachmentBody
       return await controller.createAttachment({ entryId, data, mimeType })
@@ -64,7 +79,12 @@ export default async function attachmentsRoutes(fastify: FastifyInstance) {
     description: "Delete an attachment",
   })
     .withParams(attachmentsSchemas.attachmentParams)
-    .withResponses(commonResponses.noContentWithErrorAndNotFound())
+    .withResponses({
+      204: { type: "null", description: "No content" },
+      400: entriesErrorResponseSchema,
+      401: entriesErrorResponseSchema,
+      404: entriesErrorResponseSchema,
+    })
     .handle(async (request: DeleteAttachmentRequest) => {
       const { id } = request.params as AttachmentParams
       return await controller.deleteAttachment(id)

@@ -5,6 +5,7 @@ export * from "./constants/error.codes"
 // Domain
 export * from "./domain/entities/entry.entity"
 export * from "./domain/ports/entries-repository.port"
+export * from "./domain/schemas/response-schemas"
 
 // Business
 export * from "./business/validation.service"

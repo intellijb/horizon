@@ -274,10 +274,18 @@ export function createRoutesFactory(
  */
 export const commonResponses = {
   success: (dataSchema?: any) => ({
-    200: dataSchema || { type: "object" },
+    200: dataSchema || {
+      type: "object",
+      additionalProperties: true,
+      description: "Success response"
+    },
   }),
   created: (dataSchema?: any) => ({
-    201: dataSchema || { type: "object" },
+    201: dataSchema || {
+      type: "object",
+      additionalProperties: true,
+      description: "Created response"
+    },
   }),
   noContent: () => ({
     204: { type: "null", description: "No content" },

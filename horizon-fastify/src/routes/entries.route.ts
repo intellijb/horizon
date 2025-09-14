@@ -3,6 +3,8 @@ import {
   EntriesError,
   EntriesController,
   entriesSchemas,
+  entriesResponseSchemas,
+  entriesErrorResponseSchema,
   CreateEntryBody,
   UpdateEntryBody,
   EntryParams,
@@ -30,7 +32,11 @@ export default async function entriesRoutes(fastify: FastifyInstance) {
     description: "Get a paginated list of entries",
   })
     .withQuery(entriesSchemas.listEntriesQuery)
-    .withResponses(commonResponses.successWithError())
+    .withResponses({
+      200: entriesResponseSchemas.entryList,
+      400: entriesErrorResponseSchema,
+      401: entriesErrorResponseSchema,
+    })
     .handle(async (request: ListEntriesRequest) => {
       const { limit, offset, type } = request.query as ListEntriesQuery
       return await controller.listEntries({ limit, offset, type })
@@ -42,7 +48,12 @@ export default async function entriesRoutes(fastify: FastifyInstance) {
     description: "Get a single entry by its ID",
   })
     .withParams(entriesSchemas.entryParams)
-    .withResponses(commonResponses.successWithErrorAndNotFound())
+    .withResponses({
+      200: entriesResponseSchemas.entry,
+      400: entriesErrorResponseSchema,
+      401: entriesErrorResponseSchema,
+      404: entriesErrorResponseSchema,
+    })
     .handle(async (request: GetEntryRequest) => {
       const { id } = request.params as EntryParams
       return await controller.getEntryById(id)
@@ -54,7 +65,11 @@ export default async function entriesRoutes(fastify: FastifyInstance) {
     description: "Create a new entry",
   })
     .withBody(entriesSchemas.createEntryBody)
-    .withResponses(commonResponses.createdWithError())
+    .withResponses({
+      201: entriesResponseSchemas.entry,
+      400: entriesErrorResponseSchema,
+      401: entriesErrorResponseSchema,
+    })
     .handle(async (request: CreateEntryRequest) => {
       const { content, type, metadata } = request.body as CreateEntryBody
       return await controller.createEntry({ content, type, metadata })
@@ -67,7 +82,12 @@ export default async function entriesRoutes(fastify: FastifyInstance) {
   })
     .withParams(entriesSchemas.entryParams)
     .withBody(entriesSchemas.updateEntryBody)
-    .withResponses(commonResponses.successWithErrorAndNotFound())
+    .withResponses({
+      200: entriesResponseSchemas.entry,
+      400: entriesErrorResponseSchema,
+      401: entriesErrorResponseSchema,
+      404: entriesErrorResponseSchema,
+    })
     .handle(async (request: UpdateEntryRequest) => {
       const { id } = request.params as EntryParams
       const { content, type, metadata } = request.body as UpdateEntryBody
@@ -80,7 +100,12 @@ export default async function entriesRoutes(fastify: FastifyInstance) {
     description: "Soft delete an entry",
   })
     .withParams(entriesSchemas.entryParams)
-    .withResponses(commonResponses.noContentWithErrorAndNotFound())
+    .withResponses({
+      204: { type: "null", description: "No content" },
+      400: entriesErrorResponseSchema,
+      401: entriesErrorResponseSchema,
+      404: entriesErrorResponseSchema,
+    })
     .handle(async (request: DeleteEntryRequest) => {
       const { id } = request.params as EntryParams
       return await controller.deleteEntry(id)
