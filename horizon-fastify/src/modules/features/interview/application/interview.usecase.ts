@@ -139,22 +139,66 @@ export class InterviewUseCase {
 
     // 4. Extract the assistant's message from the response
     let assistantMessage = ""
-    if (response.apiResponse && typeof response.apiResponse === "object") {
+
+    // The actual message content is in dbRecord.output
+    if (response.dbRecord && response.dbRecord.output) {
+      const output = response.dbRecord.output
+
+      // Handle array of response items (OpenAI's structured format)
+      if (Array.isArray(output)) {
+        // Find the message item (type: 'message' with role: 'assistant')
+        const messageItem = output.find((item: any) =>
+          item.type === 'message' && item.role === 'assistant'
+        )
+
+        if (messageItem && messageItem.content) {
+          // Extract text from the content array
+          if (Array.isArray(messageItem.content)) {
+            assistantMessage = messageItem.content
+              .filter((item: any) => item.text)
+              .map((item: any) => item.text)
+              .join("\n")
+          } else if (typeof messageItem.content === "string") {
+            assistantMessage = messageItem.content
+          }
+        }
+
+        // Removed fallback - the message should always be in the 'message' type item
+      } else if (typeof output === "string") {
+        assistantMessage = output
+      } else if (output && typeof output === "object") {
+        // Handle object format
+        if (output.text) {
+          assistantMessage = output.text
+        } else if (output.content) {
+          assistantMessage = output.content
+        }
+      }
+    }
+
+    // Fallback to checking apiResponse if dbRecord doesn't have the message
+    if (!assistantMessage && response.apiResponse && typeof response.apiResponse === "object") {
       const apiResponse = response.apiResponse as any
       if (apiResponse.output) {
-        // Handle array of content items
         if (Array.isArray(apiResponse.output)) {
-          assistantMessage = apiResponse.output
-            .filter((item: any) => item.type === "text")
-            .map((item: any) => item.text)
-            .join("\n")
+          // Try same extraction logic as above
+          const messageItem = apiResponse.output.find((item: any) =>
+            item.type === 'message' && item.role === 'assistant'
+          )
+
+          if (messageItem && messageItem.content) {
+            if (Array.isArray(messageItem.content)) {
+              assistantMessage = messageItem.content
+                .filter((item: any) => item.text)
+                .map((item: any) => item.text)
+                .join("\n")
+            } else if (typeof messageItem.content === "string") {
+              assistantMessage = messageItem.content
+            }
+          }
         } else if (typeof apiResponse.output === "string") {
           assistantMessage = apiResponse.output
         }
-      } else if (apiResponse.content) {
-        assistantMessage = apiResponse.content
-      } else if (apiResponse.message) {
-        assistantMessage = apiResponse.message
       }
     }
 
@@ -168,8 +212,17 @@ export class InterviewUseCase {
       throw new Error("Failed to update session")
     }
 
+    if (!assistantMessage) {
+      console.error("Failed to extract message from OpenAI response:", {
+        hasDbRecord: !!response.dbRecord,
+        dbRecordOutput: response.dbRecord?.output,
+        hasApiResponse: !!response.apiResponse,
+      })
+      throw new Error("Failed to get response from AI. Please try again.")
+    }
+
     return {
-      message: assistantMessage || "I understand. Let me think about that...",
+      message: assistantMessage,
       session: updatedSession,
     }
   }
