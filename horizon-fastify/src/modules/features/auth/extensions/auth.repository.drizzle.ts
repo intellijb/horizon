@@ -6,6 +6,7 @@ import {
   users,
   devices,
   refreshTokens,
+  accessTokens,
   passwordResetTokens,
   authAttempts,
   securityEvents,
@@ -158,6 +159,20 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
   }
 
   // Token operations
+  async saveAccessToken(data: {
+    userId: string
+    deviceId: string
+    jti: string
+    expiresAt: Date
+  }): Promise<void> {
+    await this.db.insert(accessTokens).values({
+      userId: data.userId,
+      deviceId: data.deviceId,
+      jti: data.jti,
+      expiresAt: data.expiresAt,
+    })
+  }
+
   async saveRefreshToken(data: {
     userId: string
     deviceId: string

@@ -26,7 +26,8 @@ export class TokenService {
   }
 
   generateAccessToken(payload: TokenPayload): string {
-    return jwt.sign(payload, this.jwtSecret, {
+    const jti = crypto.randomUUID()
+    return jwt.sign({ ...payload, jti }, this.jwtSecret, {
       expiresIn: AuthConstants.ACCESS_TOKEN_EXPIRES_IN,
     })
   }
@@ -83,5 +84,9 @@ export class TokenService {
 
   generateSessionId(): string {
     return crypto.randomUUID()
+  }
+
+  decodeToken(token: string): any {
+    return jwt.decode(token)
   }
 }

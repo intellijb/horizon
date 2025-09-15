@@ -19,6 +19,12 @@ export interface AuthRepositoryPort {
   }): Promise<{ data: User[]; total: number; page: number; limit: number }>
 
   // Token operations
+  saveAccessToken(data: {
+    userId: string
+    deviceId: string
+    jti: string
+    expiresAt: Date
+  }): Promise<void>
   saveRefreshToken(data: {
     userId: string
     deviceId: string

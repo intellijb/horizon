@@ -109,6 +109,17 @@ export class LoginUseCase {
       sessionId: this.tokenService.generateSessionId(),
     })
 
+    // Decode access token to get JTI and expiration
+    const decodedAccessToken = this.tokenService.decodeToken(tokens.accessToken) as any
+
+    // Save access token
+    await this.repository.saveAccessToken({
+      userId: user.id,
+      deviceId: device.id,
+      jti: decodedAccessToken.jti,
+      expiresAt: new Date(decodedAccessToken.exp * 1000),
+    })
+
     // Save refresh token
     await this.repository.saveRefreshToken({
       userId: user.id,

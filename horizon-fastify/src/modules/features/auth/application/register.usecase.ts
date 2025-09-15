@@ -5,6 +5,7 @@ import { AuthRepositoryPort } from "../domain/ports/auth-repository.port"
 import { User } from "../domain/entities/user.entity"
 import { TokenPair, TokenPayload } from "../domain/value-objects/token.value"
 import { SecurityEventTypes } from "../constants/auth.constants"
+import { TokenService } from "../business/token.service"
 
 export interface RegisterRequest {
   email: string
@@ -30,10 +31,12 @@ export class RegisterUseCase {
   private readonly ACCESS_TOKEN_EXPIRES_IN = 15 * 60 // 15 minutes
   private readonly REFRESH_TOKEN_EXPIRES_IN = 7 * 24 * 60 * 60 // 7 days
   private readonly BCRYPT_ROUNDS = 12
+  private tokenService: TokenService
 
   constructor(private repository: AuthRepositoryPort) {
     this.JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
     this.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "your-refresh-secret"
+    this.tokenService = new TokenService()
   }
 
   async execute(request: RegisterRequest): Promise<RegisterResponse> {
@@ -72,6 +75,17 @@ export class RegisterUseCase {
 
     // Generate tokens
     const tokens = await this.generateTokens(user, device.id)
+
+    // Decode access token to get JTI and expiration
+    const decodedAccessToken = this.tokenService.decodeToken(tokens.accessToken) as any
+
+    // Save access token
+    await this.repository.saveAccessToken({
+      userId: user.id,
+      deviceId: device.id,
+      jti: decodedAccessToken.jti,
+      expiresAt: new Date(decodedAccessToken.exp * 1000),
+    })
 
     // Save refresh token
     await this.repository.saveRefreshToken({
@@ -117,27 +131,10 @@ export class RegisterUseCase {
       email: user.email,
       role: "user", // Default role since schema doesn't store roles
       deviceId,
-      sessionId: crypto.randomUUID(),
+      sessionId: this.tokenService.generateSessionId(),
     }
 
-    const accessToken = jwt.sign(payload, this.JWT_SECRET, {
-      expiresIn: this.ACCESS_TOKEN_EXPIRES_IN,
-    })
-
-    const refreshToken = jwt.sign(
-      { ...payload, type: "refresh" },
-      this.JWT_REFRESH_SECRET,
-      {
-        expiresIn: this.REFRESH_TOKEN_EXPIRES_IN,
-      },
-    )
-
-    return {
-      accessToken,
-      refreshToken,
-      expiresIn: this.ACCESS_TOKEN_EXPIRES_IN,
-      tokenType: "Bearer",
-    }
+    return this.tokenService.generateTokenPair(payload)
   }
 
   private isValidEmail(email: string): boolean {

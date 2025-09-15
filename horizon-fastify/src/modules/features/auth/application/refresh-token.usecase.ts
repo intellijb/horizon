@@ -3,6 +3,7 @@ import crypto from "crypto"
 import { AuthRepositoryPort } from "../domain/ports/auth-repository.port"
 import { TokenPair, TokenPayload } from "../domain/value-objects/token.value"
 import { SecurityEventTypes } from "../constants/auth.constants"
+import { TokenService } from "../business/token.service"
 
 export interface RefreshTokenRequest {
   refreshToken: string
@@ -23,10 +24,12 @@ export class RefreshTokenUseCase {
   private readonly JWT_REFRESH_SECRET: string
   private readonly ACCESS_TOKEN_EXPIRES_IN = 15 * 60 // 15 minutes
   private readonly REFRESH_TOKEN_EXPIRES_IN = 7 * 24 * 60 * 60 // 7 days
+  private tokenService: TokenService
 
   constructor(private repository: AuthRepositoryPort) {
     this.JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
     this.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "your-refresh-secret"
+    this.tokenService = new TokenService()
   }
 
   async execute(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
@@ -80,26 +83,27 @@ export class RefreshTokenUseCase {
       email: user.email,
       role: "user", // Default role since schema doesn't store roles
       deviceId: payload.deviceId,
-      sessionId: crypto.randomUUID(),
+      sessionId: this.tokenService.generateSessionId(),
     }
 
-    const accessToken = jwt.sign(newPayload, this.JWT_SECRET, {
-      expiresIn: this.ACCESS_TOKEN_EXPIRES_IN,
-    })
+    const tokens = this.tokenService.generateTokenPair(newPayload)
 
-    const refreshToken = jwt.sign(
-      { ...newPayload, type: "refresh" },
-      this.JWT_REFRESH_SECRET,
-      {
-        expiresIn: this.REFRESH_TOKEN_EXPIRES_IN,
-      },
-    )
+    // Decode access token to get JTI and expiration
+    const decodedAccessToken = this.tokenService.decodeToken(tokens.accessToken) as any
+
+    // Save access token
+    await this.repository.saveAccessToken({
+      userId: user.id,
+      deviceId: payload.deviceId,
+      jti: decodedAccessToken.jti,
+      expiresAt: new Date(decodedAccessToken.exp * 1000),
+    })
 
     // Save new refresh token
     await this.repository.saveRefreshToken({
       userId: user.id,
       deviceId: payload.deviceId,
-      token: refreshToken,
+      token: tokens.refreshToken,
       expiresAt: new Date(Date.now() + this.REFRESH_TOKEN_EXPIRES_IN * 1000),
     })
 
@@ -116,10 +120,10 @@ export class RefreshTokenUseCase {
     }
 
     return {
-      accessToken,
-      refreshToken,
-      expiresIn: this.ACCESS_TOKEN_EXPIRES_IN,
-      tokenType: "Bearer",
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.expiresIn,
+      tokenType: tokens.tokenType,
       user: user.toPublicJSON(),
     }
   }
