@@ -4,6 +4,7 @@ import { createDatabase } from '@modules/platform/database/drizzle-manager';
 import { users, devices } from '@/modules/features/auth/extensions/schema';
 import { hash } from 'argon2';
 import { nanoid } from 'nanoid';
+import { seedInterviewData } from '@modules/features/interview/extensions/seed/interview-seed';
 
 async function seedDatabase() {
   // Create a new pool for seeding
@@ -46,6 +47,10 @@ async function seedDatabase() {
       .returning();
 
     console.log('✅ Created test device:', testDevice[0].deviceName);
+
+    // Seed interview data
+    console.log('🌱 Seeding interview data...');
+    await seedInterviewData();
 
     console.log('🎉 Database seeding completed successfully');
   } catch (error) {

@@ -22,6 +22,7 @@ export interface CreateConversationParams {
  */
 export interface CreateResponseParams {
   conversation: string
+  input?: ConversationItem[] | string
   model?: string
   max_output_tokens?: number
   temperature?: number

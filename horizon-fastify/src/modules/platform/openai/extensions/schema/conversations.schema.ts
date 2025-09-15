@@ -5,6 +5,7 @@ import {
   integer,
   pgSchema,
   index,
+  uuid,
 } from "drizzle-orm/pg-core";
 
 // Create llm schema
@@ -15,6 +16,7 @@ export const conversationsOpenai = llmSchema.table(
   "conversations_openai",
   {
     id: text("id").primaryKey(),
+    userId: uuid("user_id").notNull(), // Added for protected access
     status: text("status").notNull(),
     metadata: jsonb("metadata"), // JSON of any
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -22,6 +24,7 @@ export const conversationsOpenai = llmSchema.table(
       .notNull(),
   },
   (table) => ({
+    userIdIdx: index("conversations_openai_user_id_idx").on(table.userId),
     createdAtIdx: index("conversations_openai_created_at_idx").on(
       table.createdAt
     ),
@@ -34,6 +37,7 @@ export const conversationMessagesOpenai = llmSchema.table(
   "conversation_messages_openai",
   {
     id: text("id").primaryKey(), // resp_67ccd3a9da748190baa7f1570fe91ac604becb25c45c1d41 (formatted)
+    userId: uuid("user_id").notNull(), // Added for protected access
     conversationId: text("conversation_id")
       .notNull()
       .references(() => conversationsOpenai.id, { onDelete: "cascade" }),
@@ -48,6 +52,9 @@ export const conversationMessagesOpenai = llmSchema.table(
       .notNull(),
   },
   (table) => ({
+    userIdIdx: index(
+      "conversation_messages_openai_user_id_idx"
+    ).on(table.userId),
     conversationIdIdx: index(
       "conversation_messages_openai_conversation_id_idx"
     ).on(table.conversationId),

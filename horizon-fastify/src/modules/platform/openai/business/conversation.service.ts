@@ -24,10 +24,18 @@ import {
 
 export class ConversationService {
   private apiService: OpenAIConversationService
-  private db = getDatabase()
+  private db: any
 
-  constructor() {
+  constructor(db?: any) {
     this.apiService = new OpenAIConversationService()
+    this.db = db
+  }
+
+  private getDb() {
+    if (!this.db) {
+      this.db = getDatabase()
+    }
+    return this.db
   }
 
   /**
@@ -115,7 +123,8 @@ export class ConversationService {
     userMessage: string | string[],
     persona?: PersonaConfig,
     context?: ConversationItem[],
-    metadata?: Record<string, string>
+    metadata?: Record<string, string>,
+    userId?: string
   ) {
     const items: ConversationItem[] = []
 
@@ -142,18 +151,19 @@ export class ConversationService {
       throw new Error(`Message validation failed: ${validation.errors.join(', ')}`)
     }
 
-    return this.create({ items, metadata })
+    return this.create({ items, metadata }, userId)
   }
 
-  async create(params: CreateConversationParams) {
+  async create(params: CreateConversationParams, userId?: string) {
     // Call API to create conversation
     const apiResponse = await this.apiService.create(params)
 
     // Store in database
-    const [conversation] = await this.db
+    const [conversation] = await this.getDb()
       .insert(conversationsOpenai)
       .values({
         id: apiResponse.id,
+        userId: userId || '00000000-0000-0000-0000-000000000000', // Temporary default
         status: ConversationStatus.ACTIVE,
         metadata: params.metadata || DEFAULTS.METADATA,
         createdAt: new Date(),
@@ -168,7 +178,7 @@ export class ConversationService {
 
   async retrieve(conversationId: string) {
     // Get from database instead of API (as specified)
-    const conversation = await this.db
+    const conversation = await this.getDb()
       .select()
       .from(conversationsOpenai)
       .where(eq(conversationsOpenai.id, conversationId))
@@ -179,7 +189,7 @@ export class ConversationService {
     }
 
     // Also get associated messages
-    const messages = await this.db
+    const messages = await this.getDb()
       .select()
       .from(conversationMessagesOpenai)
       .where(eq(conversationMessagesOpenai.conversationId, conversationId))
@@ -195,7 +205,7 @@ export class ConversationService {
     const apiResponse = await this.apiService.delete(conversationId)
 
     // Update database status to deleted
-    const [updatedConversation] = await this.db
+    const [updatedConversation] = await this.getDb()
       .update(conversationsOpenai)
       .set({
         status: ConversationStatus.DELETED,
@@ -209,7 +219,7 @@ export class ConversationService {
     }
   }
 
-  async createResponse(params: CreateResponseParams) {
+  async createResponse(params: CreateResponseParams, userId?: string) {
     // Call API to create response
     const apiResponse = await this.apiService.createResponse(params)
 
@@ -218,15 +228,16 @@ export class ConversationService {
     const responseId = responseData.id || `${DEFAULTS.RESPONSE_ID_PREFIX}${Date.now()}_${Math.random().toString(36).substring(DEFAULTS.ID_GENERATION.SUBSTRING_START, DEFAULTS.ID_GENERATION.SUBSTRING_END)}`
 
     // Store response in conversationMessagesOpenai table
-    const [messageRecord] = await this.db
+    const [messageRecord] = await this.getDb()
       .insert(conversationMessagesOpenai)
       .values({
         id: responseId,
+        userId: userId || '00000000-0000-0000-0000-000000000000', // Temporary default
         conversationId: params.conversation,
         status: responseData.status || MessageStatus.COMPLETED,
         model: params.model || responseData.model || DEFAULTS.MODEL,
         output: responseData.output || responseData.content || [],
-        temperature: params.temperature,
+        temperature: params.temperature ? Math.round(params.temperature * 100) : null,
         usage: responseData.usage || DEFAULTS.METADATA,
         metadata: DEFAULTS.METADATA,
         createdAt: new Date(),
@@ -240,7 +251,7 @@ export class ConversationService {
   }
 
   async getMessages(conversationId: string) {
-    return await this.db
+    return await this.getDb()
       .select()
       .from(conversationMessagesOpenai)
       .where(eq(conversationMessagesOpenai.conversationId, conversationId))

@@ -53,13 +53,22 @@ export class OpenAIConversationService {
 
   async createResponse(params: CreateResponseParams) {
     try {
-      const response = await this.client.responses.create({
+      const requestBody: any = {
         conversation: params.conversation,
+        input: params.input,
         model: params.model || DEFAULTS.MODEL,
         max_output_tokens: params.max_output_tokens,
-        temperature: params.temperature ?? DEFAULTS.TEMPERATURE,
         stream: params.stream,
-      });
+      };
+
+      // Only add temperature if explicitly provided and not default
+      // Some models don't support temperature
+      if (params.temperature !== undefined && params.temperature !== null) {
+        // Skip temperature for now as the model doesn't support it
+        // requestBody.temperature = params.temperature;
+      }
+
+      const response = await this.client.responses.create(requestBody);
       return response;
     } catch (error) {
       throw new Error(ERROR_MESSAGES.CREATE_RESPONSE_FAILED(error))
