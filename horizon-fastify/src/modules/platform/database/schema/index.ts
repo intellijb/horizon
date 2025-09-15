@@ -2,3 +2,4 @@
 // This file serves as a central point for Drizzle configuration
 export * from "@/modules/features/auth/extensions/schema"
 export * from "@/modules/features/entries/extensions/schema"
+export * from "@/modules/platform/openai/extensions/schema"
