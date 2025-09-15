@@ -6,7 +6,6 @@ import {
   createInterviewBodySchema,
   answerInterviewBodySchema,
   completeInterviewBodySchema,
-  emptyBodySchema,
   sessionIdParamsSchema,
   interviewIdParamsSchema,
   listInterviewsQuerySchema,
@@ -114,7 +113,6 @@ export default async function interviewRoutes(fastify: FastifyInstance) {
     description: "Pause an active interview session to resume later",
   })
     .withParams(sessionIdParamsSchema)
-    .withBody(emptyBodySchema)
     .withResponses({
       200: interviewSessionSchema,
       400: errorResponseSchema,
@@ -133,7 +131,6 @@ export default async function interviewRoutes(fastify: FastifyInstance) {
     description: "Resume a paused interview session",
   })
     .withParams(sessionIdParamsSchema)
-    .withBody(emptyBodySchema)
     .withResponses({
       200: interviewSessionSchema,
       400: errorResponseSchema,
