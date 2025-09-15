@@ -1,7 +1,7 @@
 import { eq, and, sql, desc, asc, inArray } from "drizzle-orm"
 import { NodePgDatabase } from "drizzle-orm/node-postgres"
 import * as schema from "@modules/platform/database/schema"
-import { sessions, interviewers } from "./schema/interview.schema"
+import { sessions, interviewers, topics } from "./schema/interview.schema"
 import { Session } from "../domain/types"
 
 type Database = NodePgDatabase<typeof schema>
@@ -43,7 +43,8 @@ export class SessionRepositoryDrizzle {
 
     if (results.length === 0) return null
 
-    return this.mapToSession(results[0])
+    const sessionsWithTopics = await this.populateTopicLabels(results)
+    return sessionsWithTopics[0]
   }
 
   async update(id: string, updates: Partial<Omit<Session, "id" | "createdAt">>): Promise<Session | null> {
@@ -133,7 +134,10 @@ export class SessionRepositoryDrizzle {
 
     const results = await query
 
-    return results.map(this.mapToSession)
+    // Fetch topic labels for all sessions
+    const sessionsWithTopics = await this.populateTopicLabels(results)
+
+    return sessionsWithTopics
   }
 
   async findByInterviewerId(interviewerId: string): Promise<Session[]> {
@@ -182,5 +186,45 @@ export class SessionRepositoryDrizzle {
       language: row.language || undefined,
       difficulty: row.difficulty || undefined,
     }
+  }
+
+  private async populateTopicLabels(sessionRows: any[]): Promise<Session[]> {
+    // Collect all unique topic IDs
+    const allTopicIds = new Set<string>()
+    for (const row of sessionRows) {
+      if (row.topicIds && Array.isArray(row.topicIds)) {
+        row.topicIds.forEach((id: string) => allTopicIds.add(id))
+      }
+    }
+
+    // Fetch all topics at once
+    const topicMap = new Map<string, string>()
+    if (allTopicIds.size > 0) {
+      const topicResults = await this.db
+        .select({
+          id: topics.id,
+          name: topics.name,
+        })
+        .from(topics)
+        .where(inArray(topics.id, Array.from(allTopicIds)))
+
+      for (const topic of topicResults) {
+        topicMap.set(topic.id, topic.name)
+      }
+    }
+
+    // Map sessions with topic labels
+    return sessionRows.map(row => {
+      const session = this.mapToSession(row)
+
+      // Add topic labels
+      if (session.topicIds && session.topicIds.length > 0) {
+        session.topicLabels = session.topicIds
+          .map(id => topicMap.get(id))
+          .filter((label): label is string => label !== undefined)
+      }
+
+      return session
+    })
   }
 }

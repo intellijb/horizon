@@ -59,6 +59,7 @@ export const listInterviewersQuerySchema = z.object({
 export const interviewSessionSchema = z.object({
   id: z.string(),
   topicIds: z.array(z.string()),
+  topicLabels: z.array(z.string()).optional(),
   title: z.string(),
   progress: z.number(),
   score: z.number(),
@@ -77,6 +78,17 @@ export const interviewSessionSchema = z.object({
   notes: z.string().optional(),
   language: z.enum(["ko", "en", "ja"]).optional(),
   difficulty: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]).optional(),
+  recentMessages: z.array(z.object({
+    id: z.string(),
+    conversationId: z.string(),
+    status: z.string(),
+    model: z.string().optional(),
+    output: z.any(),
+    temperature: z.number().optional(),
+    usage: z.any(),
+    metadata: z.any(),
+    createdAt: z.string(),
+  })).optional(),
 })
 
 export const interviewerSchema = z.object({
@@ -115,6 +127,7 @@ export const categorySchema = z.object({
 export const topicSchema = z.object({
   id: z.string(),
   categoryId: z.string(),
+  categoryName: z.string().optional(),
   name: z.string(),
   description: z.string().optional(),
   difficulty: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]).optional(),

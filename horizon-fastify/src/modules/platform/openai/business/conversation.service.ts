@@ -220,41 +220,100 @@ export class ConversationService {
   }
 
   async createResponse(params: CreateResponseParams, userId?: string) {
-    // Call API to create response
-    const apiResponse = await this.apiService.createResponse(params)
+    // First, store the user message with in_progress status
+    const userMessageId = `msg_user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
 
-    // Extract response data - API response structure may vary
-    const responseData = apiResponse as any
-    const responseId = responseData.id || `${DEFAULTS.RESPONSE_ID_PREFIX}${Date.now()}_${Math.random().toString(36).substring(DEFAULTS.ID_GENERATION.SUBSTRING_START, DEFAULTS.ID_GENERATION.SUBSTRING_END)}`
-
-    // Store response in conversationMessagesOpenai table
-    const [messageRecord] = await this.getDb()
+    // Store user message input in the database
+    const [userMessageRecord] = await this.getDb()
       .insert(conversationMessagesOpenai)
       .values({
-        id: responseId,
-        userId: userId || '00000000-0000-0000-0000-000000000000', // Temporary default
+        id: userMessageId,
+        userId: userId || '00000000-0000-0000-0000-000000000000',
         conversationId: params.conversation,
-        status: responseData.status || MessageStatus.COMPLETED,
-        model: params.model || responseData.model || DEFAULTS.MODEL,
-        output: responseData.output || responseData.content || [],
+        status: MessageStatus.IN_PROGRESS,
+        model: params.model || DEFAULTS.MODEL,
+        input: {
+          message: params.input || params.messages || "",
+          temperature: params.temperature,
+          timestamp: new Date().toISOString(),
+        },
+        output: [], // Will be updated with response
         temperature: params.temperature ? Math.round(params.temperature * 100) : null,
-        usage: responseData.usage || DEFAULTS.METADATA,
+        usage: null,
         metadata: DEFAULTS.METADATA,
         createdAt: new Date(),
       })
       .returning()
 
-    return {
-      apiResponse,
-      dbRecord: messageRecord,
+    try {
+      // Call API to create response
+      const apiResponse = await this.apiService.createResponse(params)
+
+      // Extract response data - API response structure may vary
+      const responseData = apiResponse as any
+
+      // Update the message record with the response
+      const [updatedMessageRecord] = await this.getDb()
+        .update(conversationMessagesOpenai)
+        .set({
+          status: responseData.status || MessageStatus.COMPLETED,
+          output: responseData.output || responseData.content || [],
+          usage: responseData.usage || DEFAULTS.METADATA,
+        })
+        .where(eq(conversationMessagesOpenai.id, userMessageId))
+        .returning()
+
+      return {
+        apiResponse,
+        dbRecord: updatedMessageRecord,
+      }
+    } catch (error) {
+      // Update status to failed if API call fails
+      await this.getDb()
+        .update(conversationMessagesOpenai)
+        .set({
+          status: MessageStatus.FAILED,
+          output: [{ error: error.message || "Failed to get response" }],
+        })
+        .where(eq(conversationMessagesOpenai.id, userMessageId))
+
+      throw error
     }
   }
 
   async getMessages(conversationId: string) {
-    return await this.getDb()
+    const messages = await this.getDb()
       .select()
       .from(conversationMessagesOpenai)
       .where(eq(conversationMessagesOpenai.conversationId, conversationId))
+      .orderBy(conversationMessagesOpenai.createdAt)
+
+    // Format messages to include both user input and assistant output
+    return messages.map((msg: any) => {
+      const formattedMessage: any = {
+        id: msg.id,
+        conversationId: msg.conversationId,
+        status: msg.status,
+        model: msg.model,
+        createdAt: msg.createdAt,
+        temperature: msg.temperature,
+        usage: msg.usage,
+        metadata: msg.metadata,
+      }
+
+      // Include user message if available
+      if (msg.input) {
+        formattedMessage.userMessage = msg.input.message || msg.input
+        formattedMessage.requestedTemperature = msg.input.temperature
+      }
+
+      // Include assistant response
+      if (msg.output) {
+        formattedMessage.assistantMessage = msg.output
+      }
+
+      return formattedMessage
+    })
   }
 
   /**

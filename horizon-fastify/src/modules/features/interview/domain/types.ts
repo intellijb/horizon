@@ -3,6 +3,7 @@ export interface Session {
   userId: string;          // Added for protected access
 
   topicIds: string[];     // 카탈로그 도입 시 사용 (선택)
+  topicLabels?: string[]; // Topic names for display
 
   title: string;           // ex) "System Design: Scale a Chat App"
 
@@ -36,6 +37,19 @@ export interface Session {
   notes?: string;
   language?: 'ko' | 'en' | 'ja';
   difficulty?: 1 | 2 | 3 | 4 | 5; // 전반 난이도 태그
+
+  // Recent messages (optional, populated when fetching session details)
+  recentMessages?: Array<{
+    id: string;
+    conversationId: string;
+    status: string;
+    model?: string;
+    output: any;
+    temperature?: number;
+    usage?: any;
+    metadata?: any;
+    createdAt: string;
+  }>;
 }
 
 export interface Interviewer {
@@ -96,6 +110,7 @@ export interface Topic {
 
   // 부모 category 참조
   categoryId: string;
+  categoryName?: string;  // Added for joined query results
 
   // 표시용
   name: string;        // ex) "Rate Limiter", "React Performance", "Conflict Resolution"

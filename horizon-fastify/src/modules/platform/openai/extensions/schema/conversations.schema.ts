@@ -43,6 +43,7 @@ export const conversationMessagesOpenai = llmSchema.table(
       .references(() => conversationsOpenai.id, { onDelete: "cascade" }),
     status: text("status").notNull(), // completed, failed, in_progress, cancelled, queued, or incomplete
     model: text("model").notNull(),
+    input: jsonb("input"), // JSON object with user message and optional temperature
     output: jsonb("output").notNull(), // JSON array with message format
     temperature: integer("temperature"),
     usage: jsonb("usage"), // JSON with input_tokens, output_tokens, etc.

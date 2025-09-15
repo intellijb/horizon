@@ -322,9 +322,28 @@ export class InterviewUseCase {
 
     const messages = await this.conversationService.getMessages(session.conversationId)
 
+    // Convert Date objects to ISO strings for serialization
+    const formattedMessages = messages.map(msg => ({
+      ...msg,
+      createdAt: msg.createdAt instanceof Date ? msg.createdAt.toISOString() : msg.createdAt
+    }))
+
     return {
       session,
-      messages,
+      messages: formattedMessages,
     }
+  }
+
+  async getRecentMessages(conversationId: string, limit: number = 10) {
+    const messages = await this.conversationService.getMessages(conversationId)
+    // Return the most recent messages, sorted by createdAt
+    return messages
+      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit)
+      .reverse() // Reverse to show oldest first in the recent set
+      .map(msg => ({
+        ...msg,
+        createdAt: msg.createdAt instanceof Date ? msg.createdAt.toISOString() : msg.createdAt
+      }))
   }
 }

@@ -128,7 +128,20 @@ export class InterviewController {
     if (session.userId !== payload.userId) {
       return { statusCode: 403, error: "Forbidden" }
     }
-    return { statusCode: 200, data: session }
+
+    // Include recent messages if conversation exists
+    let sessionWithMessages = { ...session }
+    if (session.conversationId) {
+      try {
+        const messages = await this.interviewUseCase.getRecentMessages(session.conversationId, 10)
+        sessionWithMessages = { ...session, recentMessages: messages }
+      } catch (error) {
+        // If messages fail to load, still return the session
+        console.error("Failed to load recent messages:", error)
+      }
+    }
+
+    return { statusCode: 200, data: sessionWithMessages }
   }
 
   async listSessions(query: ListInterviewsQuery, token: string): Promise<ControllerResult> {

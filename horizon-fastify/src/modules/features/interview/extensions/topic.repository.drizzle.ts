@@ -1,7 +1,7 @@
 import { eq, and, sql, desc, asc, inArray, like } from "drizzle-orm"
 import { NodePgDatabase } from "drizzle-orm/node-postgres"
 import * as schema from "@modules/platform/database/schema"
-import { topics } from "./schema/interview.schema"
+import { topics, categories } from "./schema/interview.schema"
 import { Topic } from "../domain/types"
 
 type Database = NodePgDatabase<typeof schema>
@@ -94,8 +94,19 @@ export class TopicRepositoryDrizzle {
     }
 
     let query = this.db
-      .select()
+      .select({
+        id: topics.id,
+        categoryId: topics.categoryId,
+        categoryName: categories.name,
+        name: topics.name,
+        description: topics.description,
+        difficulty: topics.difficulty,
+        tags: topics.tags,
+        createdAt: topics.createdAt,
+        updatedAt: topics.updatedAt,
+      })
       .from(topics)
+      .leftJoin(categories, eq(topics.categoryId, categories.id))
       .orderBy(asc(topics.name))
 
     if (conditions.length > 0) {
@@ -112,17 +123,28 @@ export class TopicRepositoryDrizzle {
 
     const results = await query
 
-    return results.map(this.mapToTopic)
+    return results.map(this.mapToTopicWithCategory)
   }
 
   async findByCategory(categoryId: string): Promise<Topic[]> {
     const results = await this.db
-      .select()
+      .select({
+        id: topics.id,
+        categoryId: topics.categoryId,
+        categoryName: categories.name,
+        name: topics.name,
+        description: topics.description,
+        difficulty: topics.difficulty,
+        tags: topics.tags,
+        createdAt: topics.createdAt,
+        updatedAt: topics.updatedAt,
+      })
       .from(topics)
+      .leftJoin(categories, eq(topics.categoryId, categories.id))
       .where(eq(topics.categoryId, categoryId))
       .orderBy(asc(topics.name))
 
-    return results.map(this.mapToTopic)
+    return results.map(this.mapToTopicWithCategory)
   }
 
   async findByTags(tags: string[]): Promise<Topic[]> {
@@ -154,14 +176,25 @@ export class TopicRepositoryDrizzle {
 
   async search(searchTerm: string): Promise<Topic[]> {
     const results = await this.db
-      .select()
+      .select({
+        id: topics.id,
+        categoryId: topics.categoryId,
+        categoryName: categories.name,
+        name: topics.name,
+        description: topics.description,
+        difficulty: topics.difficulty,
+        tags: topics.tags,
+        createdAt: topics.createdAt,
+        updatedAt: topics.updatedAt,
+      })
       .from(topics)
+      .leftJoin(categories, eq(topics.categoryId, categories.id))
       .where(
         like(topics.name, `%${searchTerm}%`)
       )
       .orderBy(asc(topics.name))
 
-    return results.map(this.mapToTopic)
+    return results.map(this.mapToTopicWithCategory)
   }
 
   async addTags(id: string, newTags: string[]): Promise<Topic | null> {
@@ -188,6 +221,20 @@ export class TopicRepositoryDrizzle {
     return {
       id: row.id,
       categoryId: row.categoryId,
+      name: row.name,
+      description: row.description || undefined,
+      difficulty: row.difficulty || undefined,
+      tags: row.tags || undefined,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    }
+  }
+
+  private mapToTopicWithCategory(row: any): Topic {
+    return {
+      id: row.id,
+      categoryId: row.categoryId,
+      categoryName: row.categoryName || undefined,
       name: row.name,
       description: row.description || undefined,
       difficulty: row.difficulty || undefined,
