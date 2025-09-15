@@ -32,6 +32,34 @@ export class AuthController {
     this.passwordService = new PasswordService()
   }
 
+  private async validateTokenWithJti(token: string) {
+    // First verify JWT signature and expiry
+    const payload = this.tokenService.verifyAccessToken(token)
+
+    // Extract JTI from the token and validate it exists in database
+    const decodedToken = this.tokenService.decodeToken(token) as any
+    if (decodedToken?.jti) {
+      const accessToken = await this.repository.findAccessTokenByJti(decodedToken.jti)
+
+      // Check if token exists and is not revoked
+      if (!accessToken) {
+        throw new AuthError(AuthErrorCodes.TOKEN_INVALID, "Invalid access token", 401)
+      }
+
+      // Check if token is revoked
+      if (accessToken.revokedAt) {
+        throw new AuthError(AuthErrorCodes.TOKEN_INVALID, "Access token has been revoked", 401)
+      }
+
+      // Check if token is expired based on database record
+      if (new Date() > accessToken.expiresAt) {
+        throw new AuthError(AuthErrorCodes.TOKEN_EXPIRED, "Access token has expired", 401)
+      }
+    }
+
+    return payload
+  }
+
   async register(data: RegisterRequest["Body"], ipAddress: string, userAgent?: string) {
     const response = await this.registerUseCase.execute({
       ...data,
@@ -60,7 +88,7 @@ export class AuthController {
   }
 
   async logout(token: string) {
-    const payload = this.tokenService.verifyAccessToken(token)
+    const payload = await this.validateTokenWithJti(token)
     if (payload.deviceId) {
       await this.repository.revokeDeviceTokens(payload.userId, payload.deviceId)
     }
@@ -109,7 +137,7 @@ export class AuthController {
   }
 
   async changePassword(data: ChangePasswordRequest["Body"], token: string) {
-    const payload = this.tokenService.verifyAccessToken(token)
+    const payload = await this.validateTokenWithJti(token)
     const user = await this.repository.findUserWithPassword(payload.email)
 
     if (!user || !user.passwordHash) {
@@ -147,7 +175,7 @@ export class AuthController {
   }
 
   async getCurrentUser(token: string) {
-    const payload = this.tokenService.verifyAccessToken(token)
+    const payload = await this.validateTokenWithJti(token)
     const user = await this.repository.findUserById(payload.userId)
 
     if (!user) {

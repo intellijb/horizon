@@ -25,6 +25,14 @@ export interface AuthRepositoryPort {
     jti: string
     expiresAt: Date
   }): Promise<void>
+  findAccessTokenByJti(jti: string): Promise<{
+    id: string
+    userId: string
+    deviceId: string
+    jti: string
+    expiresAt: Date
+    revokedAt: Date | null
+  } | null>
   saveRefreshToken(data: {
     userId: string
     deviceId: string

@@ -25,6 +25,8 @@ export const completeInterviewBodySchema = z.object({
   finalScore: z.number().min(0).max(100).optional(),
 })
 
+export const emptyBodySchema = z.object({}).strict()
+
 export const listInterviewsQuerySchema = z.object({
   status: z.enum(["draft", "active", "paused", "completed", "archived"]).optional(),
   interviewerId: z.string().uuid().optional(),
@@ -171,6 +173,7 @@ export const errorResponseSchema = z.object({
 export type CreateInterviewBody = z.infer<typeof createInterviewBodySchema>
 export type AnswerInterviewBody = z.infer<typeof answerInterviewBodySchema>
 export type CompleteInterviewBody = z.infer<typeof completeInterviewBodySchema>
+export type EmptyBody = z.infer<typeof emptyBodySchema>
 export type InterviewIdParams = z.infer<typeof interviewIdParamsSchema>
 export type SessionIdParams = z.infer<typeof sessionIdParamsSchema>
 export type ListInterviewsQuery = z.infer<typeof listInterviewsQuerySchema>

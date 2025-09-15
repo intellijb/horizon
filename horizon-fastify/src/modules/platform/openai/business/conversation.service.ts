@@ -233,7 +233,7 @@ export class ConversationService {
         status: MessageStatus.IN_PROGRESS,
         model: params.model || DEFAULTS.MODEL,
         input: {
-          message: params.input || params.messages || "",
+          message: params.input || "",
           temperature: params.temperature,
           timestamp: new Date().toISOString(),
         },

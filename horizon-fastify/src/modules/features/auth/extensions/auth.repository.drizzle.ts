@@ -173,6 +173,23 @@ export class AuthRepositoryDrizzle implements AuthRepositoryPort {
     })
   }
 
+  async findAccessTokenByJti(jti: string): Promise<{
+    id: string
+    userId: string
+    deviceId: string
+    jti: string
+    expiresAt: Date
+    revokedAt: Date | null
+  } | null> {
+    const [result] = await this.db
+      .select()
+      .from(accessTokens)
+      .where(eq(accessTokens.jti, jti))
+      .limit(1)
+
+    return result || null
+  }
+
   async saveRefreshToken(data: {
     userId: string
     deviceId: string
