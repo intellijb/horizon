@@ -1,3 +1,5 @@
+import { MODEL_CONFIG } from "@modules/features/interview/constants/model"
+
 /**
  * Default values for OpenAI conversations and responses
  */
@@ -5,7 +7,7 @@ export const DEFAULTS = {
   /**
    * Default model to use when none is specified
    */
-  MODEL: "gpt-5-nano",
+  MODEL: MODEL_CONFIG.DEFAULT_MODEL,
 
   /**
    * Default temperature for responses

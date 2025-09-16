@@ -1,7 +1,7 @@
 import { getDatabase } from "@modules/platform/database"
 import { conversationsOpenai, conversationMessagesOpenai } from "../extensions/schema"
 import { OpenAIConversationService } from "../extensions/conversation.api"
-import { eq, desc } from "drizzle-orm"
+import { eq, desc, ne, and } from "drizzle-orm"
 import {
   ConversationStatus,
   MessageStatus,
@@ -398,7 +398,12 @@ export class ConversationService {
         createdAt: conversationMessagesOpenai.createdAt,
       })
       .from(conversationMessagesOpenai)
-      .where(eq(conversationMessagesOpenai.conversationId, conversationId))
+      .where(
+        and(
+          eq(conversationMessagesOpenai.conversationId, conversationId),
+          ne(conversationMessagesOpenai.status, MessageStatus.FAILED)
+        )
+      )
       .orderBy(desc(conversationMessagesOpenai.createdAt))
 
     if (limit) {

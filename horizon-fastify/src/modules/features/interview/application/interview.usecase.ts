@@ -5,6 +5,7 @@ import { InterviewerService } from "../business/interviewer.service";
 import { TopicService } from "../business/topic.service";
 import { CategoryService } from "../business/category.service";
 import { ConversationService } from "@modules/platform/openai/business/conversation.service";
+import { MODEL_CONFIG } from "../constants/model";
 import {
   PersonaConfig,
   MessageRole,
@@ -449,7 +450,7 @@ export class InterviewUseCase {
       id: msg.id,
       conversationId: msg.conversationId,
       status: msg.status || "completed",
-      model: msg.model || "gpt-5-nano",
+      model: msg.model || MODEL_CONFIG.DEFAULT_MODEL,
       input: msg.input || null, // Include the user's input
       output: msg.output || [],
       temperature: msg.temperature || 0.7,
