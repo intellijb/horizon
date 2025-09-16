@@ -52,16 +52,12 @@ COPY src/modules/platform/database/migrations ./dist/modules/platform/database/m
 # Copy drizzle config for migrations
 COPY drizzle.config.ts ./
 
-# Install drizzle-kit globally as root for migration
+# Install drizzle-kit and dotenv as root for migration
 USER root
-RUN npm install -g drizzle-kit
+RUN npm install --no-save --legacy-peer-deps drizzle-kit dotenv
 
 # Change ownership to fastify user
 RUN chown -R fastify:nodejs /app
 USER fastify
 
 EXPOSE 3000
-
-# Run database sync with drizzle-kit push before starting the server
-# If migration fails, the container will stop and exit with error
-CMD ["sh", "-c", "drizzle-kit push --verbose 2>&1 && echo '✅ Database synced successfully' && node dist/server.js || (echo '❌ Database sync failed. Check GitHub Actions logs or GHCR deployment for details.' && exit 1)"]
