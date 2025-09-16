@@ -12,7 +12,7 @@ FROM base AS deps
 # Copy package files
 COPY package.json package-lock.json ./
 # Install only production dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force
 
 # ------------------------
 # Builder
