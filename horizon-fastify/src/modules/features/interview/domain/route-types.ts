@@ -85,6 +85,7 @@ export const interviewSessionSchema = z.object({
     conversationId: z.string(),
     status: z.string(),
     model: z.string().optional(),
+    input: z.any().nullable().optional(), // User's input message
     output: z.any(),
     temperature: z.number().optional(),
     usage: z.any(),

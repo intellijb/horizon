@@ -49,6 +49,14 @@ export class SessionService {
     return this.updateSession(id, updates);
   }
 
+  async getUserSessions(userId: string, limit: number = 10): Promise<Session[]> {
+    const sessions = await this.listSessions({ userId });
+    // Sort by createdAt descending and limit
+    return sessions
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
+  }
+
   async pauseSession(id: string): Promise<Session | null> {
     return this.updateSession(id, {
       status: 'paused',

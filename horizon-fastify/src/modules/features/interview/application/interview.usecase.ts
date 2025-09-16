@@ -7,7 +7,8 @@ import { CategoryService } from "../business/category.service"
 import { ConversationService } from "@modules/platform/openai/business/conversation.service"
 import { PersonaConfig, MessageRole, CreateResponseParams } from "@modules/platform/openai/domain"
 import { Session, Interviewer, Topic } from "../domain/types"
-import { findBestPromptTemplate, getPromptTemplate, INTERVIEW_PROMPT_TEMPLATES } from "../extensions/prompts"
+import { findBestPromptTemplate, getPromptTemplate, INTERVIEW_PROMPT_TEMPLATES, FORCE_KOREAN_LANGUAGE } from "../extensions/prompts"
+import { selectInitialQuestion } from "../extensions/question-bank"
 
 export interface CreateInterviewRequest {
   userId: string
@@ -69,22 +70,46 @@ export class InterviewUseCase {
       throw new Error("No suitable prompt template found")
     }
 
-    // 4. Create persona configuration for OpenAI
+    // 4. Select an appropriate initial question based on context
+    const topicNames = topics.map(t => t.name)
+    const difficulty = request.difficulty || 3
+
+    // Get user's previous interview questions to avoid repetition
+    const previousQuestionIds = await this.getPreviousQuestionIds(request.userId)
+
+    const initialQuestion = selectInitialQuestion(
+      topicNames,
+      difficulty,
+      request.title,
+      previousQuestionIds
+    )
+
+    // 5. Create persona configuration for OpenAI with context about the question
+    const systemInstructions = `${promptTemplate.systemPrompt}
+
+현재 평가 중점: ${initialQuestion.assessmentFocus.join(", ")}
+난이도: ${difficulty}/5${FORCE_KOREAN_LANGUAGE ? "\n\n중요: 모든 대답은 반드시 한국어로 작성하세요." : ""}`
+
     const personaConfig: PersonaConfig = {
       persona: interviewer.displayName,
-      instructions: promptTemplate.systemPrompt,
+      instructions: systemInstructions,
       role: MessageRole.SYSTEM
     }
 
-    // 5. Create conversation with OpenAI using the persona
+    // 6. Use the selected question as the initial message
+    const initialMessage = FORCE_KOREAN_LANGUAGE ? initialQuestion.korean : initialQuestion.english
+
+    // 7. Create conversation with OpenAI using the persona and selected question
     const conversationResponse = await this.conversationService.createWithMessages(
-      promptTemplate.initialMessage,
+      initialMessage,
       personaConfig,
       undefined,
       {
         interviewerId: interviewer.id,
         language: request.language || "ko",
-        difficulty: String(request.difficulty || 3),
+        difficulty: String(difficulty),
+        questionId: initialQuestion.id,
+        assessmentFocus: initialQuestion.assessmentFocus.join(","),
       },
       request.userId
     )
@@ -107,7 +132,7 @@ export class InterviewUseCase {
     return {
       session,
       interviewer,
-      initialMessage: promptTemplate.initialMessage,
+      initialMessage,
     }
   }
 
@@ -335,15 +360,41 @@ export class InterviewUseCase {
   }
 
   async getRecentMessages(conversationId: string, limit: number = 10) {
-    const messages = await this.conversationService.getMessages(conversationId)
-    // Return the most recent messages, sorted by createdAt
-    return messages
-      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, limit)
-      .reverse() // Reverse to show oldest first in the recent set
-      .map(msg => ({
-        ...msg,
-        createdAt: msg.createdAt instanceof Date ? msg.createdAt.toISOString() : msg.createdAt
-      }))
+    // Get raw message records from the database
+    const messages = await this.conversationService.getMessageRecords(conversationId, limit)
+
+    // Map to the expected format for the response schema, including input field
+    return messages.map(msg => ({
+      id: msg.id,
+      conversationId: msg.conversationId,
+      status: msg.status || "completed",
+      model: msg.model || "gpt-5-nano",
+      input: msg.input || null, // Include the user's input
+      output: msg.output || [],
+      temperature: msg.temperature || 70,
+      usage: msg.usage || {},
+      metadata: msg.metadata || {},
+      createdAt: msg.createdAt instanceof Date ? msg.createdAt.toISOString() : (msg.createdAt || new Date().toISOString()),
+    }))
+  }
+
+  private async getPreviousQuestionIds(userId: string): Promise<string[]> {
+    // Get user's recent sessions to track which questions have been asked
+    const recentSessions = await this.sessionService.getUserSessions(userId, 10)
+    const questionIds: string[] = []
+
+    for (const session of recentSessions) {
+      if (session.conversationId) {
+        const messages = await this.conversationService.getMessageRecords(session.conversationId, 1)
+        if (messages.length > 0 && messages[0].metadata) {
+          const metadata = messages[0].metadata as any
+          if (metadata.questionId) {
+            questionIds.push(metadata.questionId)
+          }
+        }
+      }
+    }
+
+    return questionIds
   }
 }

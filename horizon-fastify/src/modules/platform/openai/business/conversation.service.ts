@@ -1,7 +1,7 @@
 import { getDatabase } from "@modules/platform/database"
 import { conversationsOpenai, conversationMessagesOpenai } from "../extensions/schema"
 import { OpenAIConversationService } from "../extensions/conversation.api"
-import { eq } from "drizzle-orm"
+import { eq, desc } from "drizzle-orm"
 import {
   ConversationStatus,
   MessageStatus,
@@ -151,7 +151,38 @@ export class ConversationService {
       throw new Error(`Message validation failed: ${validation.errors.join(', ')}`)
     }
 
-    return this.create({ items, metadata }, userId)
+    // Create the conversation with OpenAI
+    const result = await this.create({ items, metadata }, userId)
+
+    // Save the initial assistant message (userMessage) to the database
+    // This is the persona-based initial message from the interviewer
+    const initialMessageId = `msg_initial_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+
+    await this.getDb()
+      .insert(conversationMessagesOpenai)
+      .values({
+        id: initialMessageId,
+        userId: userId || '00000000-0000-0000-0000-000000000000',
+        conversationId: result.id,
+        status: MessageStatus.COMPLETED,
+        model: DEFAULTS.MODEL,
+        input: null, // No user input for initial message
+        output: [
+          {
+            type: MessageType.MESSAGE,
+            role: MessageRole.ASSISTANT,
+            content: Array.isArray(userMessage)
+              ? userMessage.map(text => ({ text, type: "text" }))
+              : [{ text: userMessage, type: "text" }]
+          }
+        ],
+        temperature: 70,
+        usage: DEFAULTS.METADATA,
+        metadata: metadata || DEFAULTS.METADATA,
+        createdAt: new Date(),
+      })
+
+    return result
   }
 
   async create(params: CreateConversationParams, userId?: string) {
@@ -238,7 +269,7 @@ export class ConversationService {
           timestamp: new Date().toISOString(),
         },
         output: [], // Will be updated with response
-        temperature: params.temperature ? Math.round(params.temperature * 100) : null,
+        temperature: params.temperature ? Math.round(params.temperature * 100) : 70,
         usage: null,
         metadata: DEFAULTS.METADATA,
         createdAt: new Date(),
@@ -289,31 +320,95 @@ export class ConversationService {
       .orderBy(conversationMessagesOpenai.createdAt)
 
     // Format messages to include both user input and assistant output
-    return messages.map((msg: any) => {
-      const formattedMessage: any = {
-        id: msg.id,
-        conversationId: msg.conversationId,
-        status: msg.status,
-        model: msg.model,
-        createdAt: msg.createdAt,
-        temperature: msg.temperature,
-        usage: msg.usage,
-        metadata: msg.metadata,
+    const formattedMessages: any[] = []
+
+    messages.forEach((msg: any) => {
+      // Add user message if available
+      if (msg.input && msg.input.message) {
+        formattedMessages.push({
+          id: `${msg.id}_user`,
+          conversationId: msg.conversationId,
+          role: 'user',
+          content: msg.input.message,
+          timestamp: msg.input.timestamp || msg.createdAt,
+          temperature: msg.input.temperature,
+        })
       }
 
-      // Include user message if available
-      if (msg.input) {
-        formattedMessage.userMessage = msg.input.message || msg.input
-        formattedMessage.requestedTemperature = msg.input.temperature
-      }
-
-      // Include assistant response
+      // Add assistant message if available
       if (msg.output) {
-        formattedMessage.assistantMessage = msg.output
-      }
+        let assistantContent = ""
 
-      return formattedMessage
+        // Extract assistant message content from various output formats
+        if (Array.isArray(msg.output)) {
+          const messageItem = msg.output.find((item: any) =>
+            item.type === 'message' && item.role === 'assistant'
+          )
+
+          if (messageItem && messageItem.content) {
+            if (Array.isArray(messageItem.content)) {
+              assistantContent = messageItem.content
+                .filter((item: any) => item.text)
+                .map((item: any) => item.text)
+                .join("\n")
+            } else if (typeof messageItem.content === "string") {
+              assistantContent = messageItem.content
+            }
+          }
+        } else if (typeof msg.output === "string") {
+          assistantContent = msg.output
+        } else if (msg.output && typeof msg.output === "object") {
+          if (msg.output.text) {
+            assistantContent = msg.output.text
+          } else if (msg.output.content) {
+            assistantContent = msg.output.content
+          }
+        }
+
+        if (assistantContent) {
+          formattedMessages.push({
+            id: `${msg.id}_assistant`,
+            conversationId: msg.conversationId,
+            role: 'assistant',
+            content: assistantContent,
+            timestamp: msg.createdAt,
+            model: msg.model,
+            usage: msg.usage,
+          })
+        }
+      }
     })
+
+    return formattedMessages
+  }
+
+  async getMessageRecords(conversationId: string, limit?: number) {
+    const query = this.getDb()
+      .select({
+        id: conversationMessagesOpenai.id,
+        userId: conversationMessagesOpenai.userId,
+        conversationId: conversationMessagesOpenai.conversationId,
+        status: conversationMessagesOpenai.status,
+        model: conversationMessagesOpenai.model,
+        input: conversationMessagesOpenai.input, // Include input field
+        output: conversationMessagesOpenai.output,
+        temperature: conversationMessagesOpenai.temperature,
+        usage: conversationMessagesOpenai.usage,
+        metadata: conversationMessagesOpenai.metadata,
+        createdAt: conversationMessagesOpenai.createdAt,
+      })
+      .from(conversationMessagesOpenai)
+      .where(eq(conversationMessagesOpenai.conversationId, conversationId))
+      .orderBy(desc(conversationMessagesOpenai.createdAt))
+
+    if (limit) {
+      query.limit(limit)
+    }
+
+    const messages = await query
+
+    // Return in chronological order
+    return messages.reverse()
   }
 
   /**
