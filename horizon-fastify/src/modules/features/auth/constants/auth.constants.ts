@@ -1,6 +1,6 @@
 export const AuthConstants = {
   // Token expiration times (in seconds)
-  ACCESS_TOKEN_EXPIRES_IN: 15 * 60, // 15 minutes
+  ACCESS_TOKEN_EXPIRES_IN: 7 * 24 * 60 * 60, // 7 days (1 week)
   REFRESH_TOKEN_EXPIRES_IN: 7 * 24 * 60 * 60, // 7 days
   PASSWORD_RESET_TOKEN_EXPIRES_IN: 60 * 60, // 1 hour
   EMAIL_VERIFICATION_TOKEN_EXPIRES_IN: 24 * 60 * 60, // 24 hours
