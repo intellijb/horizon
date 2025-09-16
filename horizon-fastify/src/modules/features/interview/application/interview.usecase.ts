@@ -10,6 +10,8 @@ import {
   PersonaConfig,
   MessageRole,
   CreateResponseParams,
+  ConversationItem,
+  MessageType,
 } from "@modules/platform/openai/domain";
 import { Session, Interviewer, Topic } from "../domain/types";
 import {
@@ -18,7 +20,6 @@ import {
   INTERVIEW_PROMPT_TEMPLATES,
   FORCE_KOREAN_LANGUAGE,
 } from "../extensions/prompts";
-import { selectInitialQuestion } from "../extensions/question-bank";
 
 export interface CreateInterviewRequest {
   userId: string;
@@ -82,27 +83,38 @@ export class InterviewUseCase {
       throw new Error("No suitable prompt template found");
     }
 
-    // 4. Select an appropriate initial question based on context
+    // 4. Prepare context for persona to generate questions
     const topicNames = topics.map((t) => t.name);
     const difficulty = request.difficulty || 3;
 
-    // Get user's previous interview questions to avoid repetition
-    const previousQuestionIds = await this.getPreviousQuestionIds(
-      request.userId
-    );
-
-    const initialQuestion = selectInitialQuestion(
-      topicNames,
-      difficulty,
-      request.title,
-      previousQuestionIds
-    );
-
-    // 5. Create persona configuration for OpenAI with context about the question
+    // 5. Create persona configuration with dynamic question generation
+    const positionTitle = request.title || "Software Engineer";
     const systemInstructions = `${promptTemplate.systemPrompt}
 
-현재 평가 중점: ${initialQuestion.assessmentFocus.join(", ")}
-난이도: ${difficulty}/5${
+CRITICAL INSTRUCTIONS:
+- DEFAULT TO SINGLE SENTENCE RESPONSES (use 2 sentences only when absolutely necessary)
+- End with a concise follow-up question
+- Stay strictly within the assigned topics - NEVER drift to unrelated areas
+
+INTERVIEW CONTEXT:
+- Position Title: ${positionTitle}
+- Topics to assess: ${topicNames.join(", ")}
+- Difficulty level: ${difficulty}/5
+- Interviewer style: ${interviewer.style}
+- Seniority level: ${interviewer.seniority}
+
+IMPORTANT: The position title "${positionTitle}" provides crucial context:
+- Focus your questions on skills and experiences relevant to a ${positionTitle} role
+- Consider the specific challenges and responsibilities typical for ${positionTitle}
+- Tailor technical depth based on what's expected from a ${positionTitle}
+
+Your first question should:
+1. Be directly relevant to both the ${positionTitle} role AND the topics: ${topicNames.join(", ")}
+2. Match the difficulty level (${difficulty}/5)
+3. Reflect your interviewer style (${interviewer.style})
+4. Consider what's most important to evaluate for a ${positionTitle} position
+
+Generate a question that naturally combines the position requirements with the topic focus.${
       FORCE_KOREAN_LANGUAGE
         ? "\n\n중요: 모든 대답은 반드시 한국어로 작성하세요."
         : ""
@@ -114,10 +126,10 @@ export class InterviewUseCase {
       role: MessageRole.SYSTEM,
     };
 
-    // 6. Use the selected question as the initial message
+    // 6. Let the persona generate its own initial question based on context
     const initialMessage = FORCE_KOREAN_LANGUAGE
-      ? initialQuestion.korean
-      : initialQuestion.english;
+      ? `안녕하세요! ${positionTitle} 포지션의 ${topicNames.join(", ")} 역량을 평가하는 면접을 진행하겠습니다. 시작해볼까요?`
+      : `Hello! Let's begin the interview for the ${positionTitle} position, focusing on ${topicNames.join(", ")}. Shall we start?`;
 
     // 7. Create conversation with OpenAI using the persona and selected question
     const conversationResponse =
@@ -127,10 +139,11 @@ export class InterviewUseCase {
         undefined,
         {
           interviewerId: interviewer.id,
+          positionTitle: positionTitle,
           language: request.language || "ko",
           difficulty: String(difficulty),
-          questionId: initialQuestion.id,
-          assessmentFocus: initialQuestion.assessmentFocus.join(","),
+          topics: topicNames.join(","),
+          interviewerStyle: interviewer.style || "structured",
         },
         request.userId
       );
@@ -176,21 +189,49 @@ export class InterviewUseCase {
       throw new Error("Session does not have an associated conversation");
     }
 
-    // 2. Create response parameters with user message as input
+    // 2. Create conversation items with context-aware instructions
+    const conversationItems: ConversationItem[] = [
+      // System instructions for evaluating the answer
+      {
+        content: `ASSESSMENT INSTRUCTIONS:
+- DEFAULT TO SINGLE SENTENCE RESPONSES unless absolutely necessary for clarity
+- NEVER switch topic areas (e.g., from technical to leadership)
+- Stay strictly within the current topic domain
+
+DECISION LOGIC:
+1. If CORRECT: Single acknowledgment, then new question in SAME topic area.
+
+2. If PARTIALLY CORRECT: One sentence on what's missing.
+
+3. If INCORRECT: Single hint or simpler rephrasing.
+
+CRITICAL: Keep responses minimal and topic-focused.`,
+        role: MessageRole.SYSTEM,
+        type: MessageType.MESSAGE,
+      },
+      // User's actual message
+      {
+        content: request.message,
+        role: MessageRole.USER,
+        type: MessageType.MESSAGE,
+      },
+    ];
+
+    // 3. Create response parameters with enhanced context
     const responseParams: CreateResponseParams = {
       conversation: session.conversationId,
-      input: request.message,
+      input: conversationItems,
       temperature: request.temperature ?? 0.7,
       stream: false,
     };
 
-    // 3. Get response from OpenAI
+    // 4. Get response from OpenAI
     const response = await this.conversationService.createResponse(
       responseParams,
       session.userId
     );
 
-    // 4. Extract the assistant's message from the response
+    // 5. Extract the assistant's message from the response
     let assistantMessage = "";
 
     // The actual message content is in dbRecord.output
@@ -463,29 +504,6 @@ export class InterviewUseCase {
     }));
   }
 
-  private async getPreviousQuestionIds(userId: string): Promise<string[]> {
-    // Get user's recent sessions to track which questions have been asked
-    const recentSessions = await this.sessionService.getUserSessions(
-      userId,
-      10
-    );
-    const questionIds: string[] = [];
-
-    for (const session of recentSessions) {
-      if (session.conversationId) {
-        const messages = await this.conversationService.getMessageRecords(
-          session.conversationId,
-          1
-        );
-        if (messages.length > 0 && messages[0].metadata) {
-          const metadata = messages[0].metadata as any;
-          if (metadata.questionId) {
-            questionIds.push(metadata.questionId);
-          }
-        }
-      }
-    }
-
-    return questionIds;
-  }
+  // Removed getPreviousQuestionIds - no longer needed with dynamic question generation
+  // The persona now generates contextually appropriate questions based on topics and interviewer style
 }

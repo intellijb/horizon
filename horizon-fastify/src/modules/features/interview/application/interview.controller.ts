@@ -129,19 +129,33 @@ export class InterviewController {
       return { statusCode: 403, error: "Forbidden" }
     }
 
+    // Get interviewer (persona) details
+    const interviewer = await this.interviewerService.getInterviewer(session.interviewerId)
+
+    // Generate avatar URL based on interviewer properties
+    const avatarUrl = this.generateAvatarUrl(interviewer)
+
+    // Enhance interviewer with human-like properties
+    const enhancedInterviewer = interviewer ? {
+      ...interviewer,
+      avatarUrl,
+      personality: this.getPersonalityTraits(interviewer.style),
+      greeting: this.getPersonalizedGreeting(interviewer),
+    } : null
+
     // Include recent messages if conversation exists
-    let sessionWithMessages = { ...session }
+    let sessionWithDetails = { ...session, interviewer: enhancedInterviewer }
     if (session.conversationId) {
       try {
         const messages = await this.interviewUseCase.getRecentMessages(session.conversationId, 10)
-        sessionWithMessages = { ...session, recentMessages: messages }
+        sessionWithDetails = { ...sessionWithDetails, recentMessages: messages }
       } catch (error) {
         // If messages fail to load, still return the session
         console.error("Failed to load recent messages:", error)
       }
     }
 
-    return { statusCode: 200, data: sessionWithMessages }
+    return { statusCode: 200, data: sessionWithDetails }
   }
 
   async listSessions(query: ListInterviewsQuery, token: string): Promise<ControllerResult> {
@@ -238,5 +252,42 @@ export class InterviewController {
   async searchInterviewers(searchTerm: string): Promise<ControllerResult> {
     const data = await this.interviewerService.searchInterviewers(searchTerm)
     return { statusCode: 200, data }
+  }
+
+  private generateAvatarUrl(interviewer: any): string {
+    // Generate consistent avatar based on interviewer properties
+    const avatarSeeds = [
+      "alex", "jordan", "sam", "taylor", "morgan", "casey", "riley", "jamie",
+      "drew", "reese", "cameron", "quinn", "avery", "skyler", "dakota", "phoenix"
+    ]
+
+    // Use interviewer ID to deterministically select an avatar
+    const index = Math.abs(interviewer?.id?.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) || 0) % avatarSeeds.length
+    const seed = avatarSeeds[index]
+    const style = interviewer?.style === 'friendly' ? 'lorelei' : 'notionists'
+
+    return `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=50`
+  }
+
+  private getPersonalityTraits(style?: string): string[] {
+    const traits: Record<string, string[]> = {
+      'friendly': ['encouraging', 'patient', 'supportive', 'approachable'],
+      'socratic': ['analytical', 'thought-provoking', 'methodical', 'insightful'],
+      'bar-raiser': ['rigorous', 'detail-oriented', 'high-standards', 'thorough'],
+      'structured': ['organized', 'systematic', 'clear', 'logical'],
+      'conversational': ['engaging', 'natural', 'relaxed', 'adaptive']
+    }
+    return traits[style || 'structured'] || traits.structured
+  }
+
+  private getPersonalizedGreeting(interviewer: any): string {
+    const greetings: Record<string, string> = {
+      'friendly': "Hi there! I'm excited to chat with you today.",
+      'socratic': "Let's explore your thinking together.",
+      'bar-raiser': "I look forward to diving deep into your expertise.",
+      'structured': "Let's begin our structured interview session.",
+      'conversational': "Great to meet you! Let's have a conversation."
+    }
+    return greetings[interviewer?.style || 'structured'] || greetings.structured
   }
 }
