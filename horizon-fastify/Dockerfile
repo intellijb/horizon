@@ -12,7 +12,7 @@ FROM base AS deps
 # Copy package files
 COPY package.json package-lock.json ./
 # Install only production dependencies
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev --legacy-peer-deps && npm cache clean --force
 
 # ------------------------
 # Builder
@@ -20,7 +20,7 @@ RUN npm ci --omit=dev && npm cache clean --force
 FROM base AS builder
 # Copy package files for full install (including dev dependencies)
 COPY package.json package-lock.json ./
-RUN npm ci --include=dev
+RUN npm ci --include=dev --legacy-peer-deps
 
 # Copy source code and config files
 COPY src ./src
@@ -64,4 +64,4 @@ EXPOSE 3000
 
 # Run database sync with drizzle-kit push before starting the server
 # If migration fails, the container will stop and exit with error
-CMD sh -c 'drizzle-kit push --verbose 2>&1 && echo "✅ Database synced successfully" && node dist/server.js || (echo "❌ Database sync failed. Check GitHub Actions logs or GHCR deployment for details." && exit 1)'
+CMD ["sh", "-c", "drizzle-kit push --verbose 2>&1 && echo '✅ Database synced successfully' && node dist/server.js || (echo '❌ Database sync failed. Check GitHub Actions logs or GHCR deployment for details.' && exit 1)"]

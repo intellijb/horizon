@@ -23,7 +23,7 @@ export class OpenAIConversationService {
     try {
       const conversation = await this.client.conversations.create({
         metadata: params.metadata || {},
-        items: params.items || [],
+        items: params.items as any || [],
       });
       return conversation;
     } catch (error) {
