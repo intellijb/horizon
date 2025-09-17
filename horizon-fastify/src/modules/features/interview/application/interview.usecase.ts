@@ -44,6 +44,7 @@ export interface AnswerInterviewRequest {
 export interface AnswerInterviewResponse {
   message: string;
   session: Session;
+  emotion: string; // Single word describing interviewer's emotional state
 }
 
 export class InterviewUseCase {
@@ -225,6 +226,11 @@ EXAMPLES:
 - "Almost there. You need to handle the <cap>edge case</cap>. What if the array is empty?"
 - "Let me rephrase. Think about <cap>time complexity</cap>. How many times does your loop execute?"
 
+EMOTION TRACKING:
+At the end of your response, add a special tag <emotion>{word}</emotion> with ONE word describing how you (the interviewer) feel about this conversation so far.
+Choose from: engaged, satisfied, concerned, encouraging, curious, impressed, patient, neutral, frustrated, disappointed.
+Example: "That's correct! <emotion>impressed</emotion>"
+
 CRITICAL: Keep responses minimal, conversational, and topic-focused.`,
         role: MessageRole.SYSTEM,
         type: MessageType.MESSAGE,
@@ -320,7 +326,19 @@ CRITICAL: Keep responses minimal, conversational, and topic-focused.`,
       }
     }
 
-    // 5. Update session progress and last interaction
+    // 5. Extract emotion from the message
+    let emotion = "neutral"; // Default emotion
+    let cleanedMessage = assistantMessage;
+
+    // Extract emotion tag if present
+    const emotionMatch = assistantMessage.match(/<emotion>([^<]+)<\/emotion>/);
+    if (emotionMatch) {
+      emotion = emotionMatch[1].trim().toLowerCase();
+      // Remove the emotion tag from the message
+      cleanedMessage = assistantMessage.replace(/<emotion>[^<]+<\/emotion>/g, "").trim();
+    }
+
+    // 6. Update session progress and last interaction
     const updatedSession = await this.sessionService.updateSession(session.id, {
       lastInteractionAt: new Date().toISOString(),
       progress: Math.min(session.progress + 10, 100), // Increment progress by 10% per interaction
@@ -340,8 +358,9 @@ CRITICAL: Keep responses minimal, conversational, and topic-focused.`,
     }
 
     return {
-      message: assistantMessage,
+      message: cleanedMessage,
       session: updatedSession,
+      emotion,
     };
   }
 
