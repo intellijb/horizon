@@ -198,6 +198,13 @@ Generate a question that naturally combines the position requirements with the t
 - NEVER switch topic areas (e.g., from technical to leadership)
 - Stay strictly within the current topic domain
 
+FORMATTING RULES:
+1. Wrap code examples with <code>{content}</code> tags
+2. Wrap important concepts or meaningful words with <cap>{word}</cap> tags
+3. Keep sentences short for verbal conversation flow
+4. If response is long, separate into multiple short sentences
+5. Remember this is text for VERBAL conversation - avoid lengthy explanations
+
 DECISION LOGIC:
 1. If CORRECT: Single acknowledgment, then new question in SAME topic area.
 
@@ -205,7 +212,12 @@ DECISION LOGIC:
 
 3. If INCORRECT: Single hint or simpler rephrasing.
 
-CRITICAL: Keep responses minimal and topic-focused.`,
+EXAMPLES:
+- "Great! Let's explore <cap>recursion</cap> next. How would you implement <code>fibonacci(n)</code>?"
+- "Almost there. You need to handle the <cap>edge case</cap>. What if the array is empty?"
+- "Let me rephrase. Think about <cap>time complexity</cap>. How many times does your loop execute?"
+
+CRITICAL: Keep responses minimal, conversational, and topic-focused.`,
         role: MessageRole.SYSTEM,
         type: MessageType.MESSAGE,
       },
