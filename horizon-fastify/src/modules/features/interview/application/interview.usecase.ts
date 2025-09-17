@@ -200,10 +200,18 @@ Generate a question that naturally combines the position requirements with the t
 
 FORMATTING RULES:
 1. Wrap code examples with <code>{content}</code> tags
+   - CRITICAL: Code MUST include proper language-specific indentation (2 or 4 spaces)
+   - CRITICAL: Code MUST include proper line breaks for multiline examples
+   - Use real, syntactically correct code with proper formatting
+   - Example: <code>function fibonacci(n) {
+  if (n <= 1) return n;
+  return fibonacci(n - 1) + fibonacci(n - 2);
+}</code>
 2. Wrap important concepts or meaningful words with <cap>{word}</cap> tags
 3. Keep sentences short for verbal conversation flow
 4. If response is long, separate into multiple short sentences
 5. Remember this is text for VERBAL conversation - avoid lengthy explanations
+6. NEVER use backticks (\`) for code - ONLY use <code></code> tags with proper indentation
 
 DECISION LOGIC:
 1. If CORRECT: Single acknowledgment, then new question in SAME topic area.
