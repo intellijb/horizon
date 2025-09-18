@@ -539,7 +539,7 @@ CRITICAL: Keep responses minimal, conversational, and topic-focused.`,
       const emotion = (metadata as any).emotion || "neutral";
 
       // Extract clean message from output if it contains assistant response
-      let cleanMessage = null;
+      let cleanMessage: string | null = null;
       if (msg.output && Array.isArray(msg.output)) {
         const assistantItem = msg.output.find(
           (item: any) => item.type === "message" && item.role === "assistant"
@@ -554,7 +554,7 @@ CRITICAL: Keep responses minimal, conversational, and topic-focused.`,
             cleanMessage = assistantItem.content;
           }
           // Remove emotion tags if any exist in the stored message
-          if (cleanMessage && typeof cleanMessage === "string") {
+          if (cleanMessage) {
             cleanMessage = cleanMessage.replace(/<emotion>[^<]+<\/emotion>/g, "").trim();
           }
         }
