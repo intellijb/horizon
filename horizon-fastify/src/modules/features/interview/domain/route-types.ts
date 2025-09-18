@@ -2,7 +2,7 @@ import { z } from "zod"
 
 // Request schemas
 export const createInterviewBodySchema = z.object({
-  topicIds: z.array(z.string().uuid()).min(1),
+  topicIds: z.array(z.string().uuid()).optional(), // Made optional to support custom topics from title
   title: z.string().min(1).max(200),
   language: z.enum(["ko", "en", "ja"]).optional(),
   difficulty: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]).optional(),
@@ -90,6 +90,8 @@ export const interviewSessionSchema = z.object({
     temperature: z.number().optional(),
     usage: z.any(),
     metadata: z.any(),
+    emotion: z.string().optional(), // Emotion extracted from the response
+    cleanMessage: z.string().nullable().optional(), // Message without emotion tags
     createdAt: z.string(),
   })).optional(),
 })
@@ -148,6 +150,7 @@ export const createInterviewResponseSchema = z.object({
 export const answerInterviewResponseSchema = z.object({
   message: z.string(),
   session: interviewSessionSchema,
+  emotion: z.string(), // Single word describing interviewer's emotional state
 })
 
 export const interviewHistoryResponseSchema = z.object({
