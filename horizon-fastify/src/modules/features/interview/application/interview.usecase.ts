@@ -338,7 +338,14 @@ CRITICAL: Keep responses minimal, conversational, and topic-focused.`,
       cleanedMessage = assistantMessage.replace(/<emotion>[^<]+<\/emotion>/g, "").trim();
     }
 
-    // 6. Update session progress and last interaction
+    // 6. Store emotion in response metadata for future retrieval
+    // Note: The emotion is stored in the message that was just created
+    // This will be accessible when calling getRecentMessages
+    if (response.dbRecord && response.dbRecord.metadata) {
+      (response.dbRecord.metadata as any).emotion = emotion;
+    }
+
+    // 7. Update session progress and last interaction
     const updatedSession = await this.sessionService.updateSession(session.id, {
       lastInteractionAt: new Date().toISOString(),
       progress: Math.min(session.progress + 10, 100), // Increment progress by 10% per interaction
@@ -525,22 +532,52 @@ CRITICAL: Keep responses minimal, conversational, and topic-focused.`,
       limit
     );
 
-    // Map to the expected format for the response schema, including input field
-    return messages.map((msg) => ({
-      id: msg.id,
-      conversationId: msg.conversationId,
-      status: msg.status || "completed",
-      model: msg.model || MODEL_CONFIG.DEFAULT_MODEL,
-      input: msg.input || null, // Include the user's input
-      output: msg.output || [],
-      temperature: msg.temperature || 0.7,
-      usage: msg.usage || {},
-      metadata: msg.metadata || {},
-      createdAt:
-        msg.createdAt instanceof Date
-          ? msg.createdAt.toISOString()
-          : msg.createdAt || new Date().toISOString(),
-    }));
+    // Map to the expected format for the response schema, including input field and emotion
+    return messages.map((msg) => {
+      // Extract emotion from metadata if present
+      const metadata = msg.metadata || {};
+      const emotion = (metadata as any).emotion || "neutral";
+
+      // Extract clean message from output if it contains assistant response
+      let cleanMessage = null;
+      if (msg.output && Array.isArray(msg.output)) {
+        const assistantItem = msg.output.find(
+          (item: any) => item.type === "message" && item.role === "assistant"
+        );
+        if (assistantItem && assistantItem.content) {
+          if (Array.isArray(assistantItem.content)) {
+            cleanMessage = assistantItem.content
+              .filter((item: any) => item.text)
+              .map((item: any) => item.text)
+              .join("\n");
+          } else if (typeof assistantItem.content === "string") {
+            cleanMessage = assistantItem.content;
+          }
+          // Remove emotion tags if any exist in the stored message
+          if (cleanMessage && typeof cleanMessage === "string") {
+            cleanMessage = cleanMessage.replace(/<emotion>[^<]+<\/emotion>/g, "").trim();
+          }
+        }
+      }
+
+      return {
+        id: msg.id,
+        conversationId: msg.conversationId,
+        status: msg.status || "completed",
+        model: msg.model || MODEL_CONFIG.DEFAULT_MODEL,
+        input: msg.input || null, // Include the user's input
+        output: msg.output || [],
+        temperature: msg.temperature || 0.7,
+        usage: msg.usage || {},
+        metadata: msg.metadata || {},
+        emotion, // Include emotion for each message
+        cleanMessage, // Include clean message without emotion tags
+        createdAt:
+          msg.createdAt instanceof Date
+            ? msg.createdAt.toISOString()
+            : msg.createdAt || new Date().toISOString(),
+      };
+    });
   }
 
   // Removed getPreviousQuestionIds - no longer needed with dynamic question generation
