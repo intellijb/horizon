@@ -23,7 +23,7 @@ import {
 
 export interface CreateInterviewRequest {
   userId: string;
-  topicIds: string[];
+  topicIds?: string[]; // Made optional to support custom topics from title
   title: string;
   language?: "ko" | "en" | "ja";
   difficulty?: 1 | 2 | 3 | 4 | 5;
@@ -65,8 +65,28 @@ export class InterviewUseCase {
   async createInterview(
     request: CreateInterviewRequest
   ): Promise<CreateInterviewResponse> {
-    // 1. Get topics to understand what the interview is about
-    const topics = await this.topicService.getTopicsByIds(request.topicIds);
+    // 1. Handle topics - either from topicIds or use title directly
+    let topics: Topic[] = [];
+    let topicNames: string[] = [];
+
+    if (request.topicIds && request.topicIds.length > 0) {
+      // Use provided topicIds
+      topics = await this.topicService.getTopicsByIds(request.topicIds);
+      topicNames = topics.map((t) => t.name);
+    } else {
+      // No topics provided - AI will use the title directly for context
+      // Create minimal topic objects for compatibility with existing code
+      const now = new Date().toISOString();
+      topics = [{
+        id: "custom-from-title",
+        categoryId: "custom-category",
+        name: "Custom Interview",
+        description: `Interview based on: ${request.title}`,
+        createdAt: now,
+        updatedAt: now,
+      }];
+      topicNames = ["Custom Interview"];
+    }
 
     // 2. Find or create the best interviewer persona based on topics
     const interviewer = await this.findOrCreateInterviewer(
@@ -78,14 +98,13 @@ export class InterviewUseCase {
     // 3. Get the prompt template for this interviewer
     const promptTemplate = interviewer.promptTemplateId
       ? getPromptTemplate(parseInt(interviewer.promptTemplateId))
-      : findBestPromptTemplate(topics.map((t) => t.name));
+      : findBestPromptTemplate(topicNames);
 
     if (!promptTemplate) {
       throw new Error("No suitable prompt template found");
     }
 
     // 4. Prepare context for persona to generate questions
-    const topicNames = topics.map((t) => t.name);
     const difficulty = request.difficulty || 3;
 
     // 5. Create persona configuration with dynamic question generation
@@ -98,19 +117,23 @@ CRITICAL INSTRUCTIONS:
 - Stay strictly within the assigned topics - NEVER drift to unrelated areas
 
 INTERVIEW CONTEXT:
-- Position Title: ${positionTitle}
-- Topics to assess: ${topicNames.join(", ")}
+- Position/Role: ${positionTitle}
+${request.topicIds && request.topicIds.length > 0 ? `- Topics to assess: ${topicNames.join(", ")}` : `- Focus Area: The title "${positionTitle}" defines the entire scope of this interview. Extract ALL relevant topics, technologies, and skills from this title and use them to guide your questions.`}
 - Difficulty level: ${difficulty}/5
 - Interviewer style: ${interviewer.style}
 - Seniority level: ${interviewer.seniority}
 
-IMPORTANT: The position title "${positionTitle}" provides crucial context:
-- Focus your questions on skills and experiences relevant to a ${positionTitle} role
-- Consider the specific challenges and responsibilities typical for ${positionTitle}
-- Tailor technical depth based on what's expected from a ${positionTitle}
+IMPORTANT: ${request.topicIds && request.topicIds.length > 0
+  ? `Focus on the specified topics (${topicNames.join(", ")}) while considering the ${positionTitle} role.`
+  : `The title "${positionTitle}" is your ONLY guide. Parse it carefully to understand:
+  - The role level (junior/senior/staff/etc.)
+  - Required technologies and frameworks
+  - Domain expertise needed
+  - Any special focus areas mentioned
+  Base ALL your questions on what's implied by this title.`}
 
 Your first question should:
-1. Be directly relevant to both the ${positionTitle} role AND the topics: ${topicNames.join(", ")}
+1. Be directly relevant to the ${positionTitle} role${request.topicIds && request.topicIds.length > 0 ? ` AND the topics: ${topicNames.join(", ")}` : " as described in the title"}
 2. Match the difficulty level (${difficulty}/5)
 3. Reflect your interviewer style (${interviewer.style})
 4. Consider what's most important to evaluate for a ${positionTitle} position
@@ -152,7 +175,7 @@ Generate a question that naturally combines the position requirements with the t
     // 6. Create interview session
     const session = await this.sessionService.createSession({
       userId: request.userId,
-      topicIds: request.topicIds,
+      topicIds: request.topicIds || [], // Empty array if using custom topics from title
       title: request.title,
       interviewerId: interviewer.id,
       conversationId: conversationResponse.id,
@@ -582,4 +605,5 @@ CRITICAL: Keep responses minimal, conversational, and topic-focused.`,
 
   // Removed getPreviousQuestionIds - no longer needed with dynamic question generation
   // The persona now generates contextually appropriate questions based on topics and interviewer style
+
 }
