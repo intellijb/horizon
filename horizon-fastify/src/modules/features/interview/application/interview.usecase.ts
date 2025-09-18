@@ -150,18 +150,10 @@ Generate a question that naturally combines the position requirements with the t
       role: MessageRole.SYSTEM,
     };
 
-    // 6. Let the persona generate its own initial question based on context
-    const initialMessage = FORCE_KOREAN_LANGUAGE
-      ? `안녕하세요! ${positionTitle} 포지션의 ${topicNames.join(", ")} 역량을 평가하는 면접을 진행하겠습니다. 시작해볼까요?`
-      : `Hello! Let's begin the interview for the ${positionTitle} position, focusing on ${topicNames.join(", ")}. Shall we start?`;
-
-    // 7. Create conversation with OpenAI using the persona and selected question
-    const conversationResponse =
-      await this.conversationService.createWithMessages(
-        initialMessage,
-        personaConfig,
-        undefined,
-        {
+    // 6. Create conversation with system instructions
+    const conversationResponse = await this.conversationService.create(
+      {
+        metadata: {
           interviewerId: interviewer.id,
           positionTitle: positionTitle,
           language: request.language || "ko",
@@ -169,10 +161,76 @@ Generate a question that naturally combines the position requirements with the t
           topics: topicNames.join(","),
           interviewerStyle: interviewer.style || "structured",
         },
-        request.userId
-      );
+        items: [
+          {
+            content: systemInstructions,
+            role: MessageRole.SYSTEM,
+            type: MessageType.MESSAGE,
+          },
+        ],
+      },
+      request.userId
+    );
 
-    // 6. Create interview session
+    // 7. Generate initial greeting and first question using AI
+    const initialPrompt = `Generate a warm, professional interview greeting and your first question.
+
+INSTRUCTIONS:
+1. Start with a brief, friendly greeting (1 sentence)
+2. Immediately follow with your first interview question
+3. The question should be directly relevant to: ${positionTitle}
+${request.topicIds && request.topicIds.length > 0 ? `4. Focus on these topics: ${topicNames.join(", ")}` : `4. Base your question on the role described in: "${positionTitle}"`}
+5. Match difficulty level ${difficulty}/5
+6. Keep the entire response to 2-3 sentences maximum
+
+EXAMPLE FORMAT:
+"Hello! I'm excited to discuss your experience as a [role]. Let's start with [specific question about the role/technology]."
+
+Generate your greeting and first question now.${FORCE_KOREAN_LANGUAGE ? "\n\n중요: 반드시 한국어로 작성하세요." : ""}`;
+
+    const initialMessageResponse = await this.conversationService.createResponse(
+      {
+        conversation: conversationResponse.id,
+        input: initialPrompt,
+        model: MODEL_CONFIG.DEFAULT_MODEL,
+        temperature: 0.7,
+      },
+      request.userId
+    );
+
+    // Extract the generated message from the response
+    let initialMessage: string;
+
+    // Handle different response structures
+    if (initialMessageResponse.apiResponse) {
+      const apiResp = initialMessageResponse.apiResponse as any;
+      initialMessage = apiResp.output?.content ||
+                      apiResp.output?.[0]?.content ||
+                      apiResp.content ||
+                      apiResp.message ||
+                      "";
+    } else if (initialMessageResponse.dbRecord) {
+      const dbRec = initialMessageResponse.dbRecord as any;
+      initialMessage = dbRec.output?.content ||
+                      dbRec.output?.[0]?.content ||
+                      "";
+    } else {
+      const resp = initialMessageResponse as any;
+      initialMessage = resp.output?.content ||
+                      resp.output?.[0]?.content ||
+                      resp.content ||
+                      resp.message ||
+                      "";
+    }
+
+    // Fallback if no message was generated
+    if (!initialMessage) {
+      initialMessage = FORCE_KOREAN_LANGUAGE
+        ? `안녕하세요! ${positionTitle} 면접을 시작하겠습니다. 첫 번째 질문입니다.`
+        : `Hello! Let's begin the interview for ${positionTitle}. Here's my first question.`;
+    }
+
+    // 8. Create interview session
     const session = await this.sessionService.createSession({
       userId: request.userId,
       topicIds: request.topicIds || [], // Empty array if using custom topics from title
