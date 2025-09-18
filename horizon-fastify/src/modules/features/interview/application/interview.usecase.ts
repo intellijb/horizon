@@ -214,10 +214,15 @@ Generate a question that naturally combines the position requirements with the t
     }
 
     // 2. Create conversation items with context-aware instructions
-    const conversationItems: ConversationItem[] = [
-      // System instructions for evaluating the answer
-      {
-        content: `ASSESSMENT INSTRUCTIONS:
+    const systemInstructions = `ASSESSMENT INSTRUCTIONS:
+IMPORTANT: First, check if the user's response indicates they want to move on to the next question.
+Common phrases include "I'm done", "next question", "move on", "skip", "pass" or similar expressions in ANY language.
+If the user indicates they want to move on:
+- Do NOT probe deeper or ask follow-ups about the current concept
+- Simply acknowledge and ask a NEW question in the SAME topic area
+- Keep it brief: "Alright! Let's move on. <New question>?"
+
+OTHERWISE, continue with normal assessment:
 - DEFAULT TO SINGLE SENTENCE RESPONSES unless absolutely necessary for clarity
 - NEVER switch topic areas (e.g., from technical to leadership)
 - Stay strictly within the current topic domain
@@ -254,7 +259,12 @@ At the end of your response, add a special tag <emotion>{word}</emotion> with ON
 Choose from: engaged, satisfied, concerned, encouraging, curious, impressed, patient, neutral, frustrated, disappointed.
 Example: "That's correct! <emotion>impressed</emotion>"
 
-CRITICAL: Keep responses minimal, conversational, and topic-focused.`,
+CRITICAL: Keep responses minimal, conversational, and topic-focused.`
+
+    const conversationItems: ConversationItem[] = [
+      // System instructions for evaluating the answer
+      {
+        content: systemInstructions,
         role: MessageRole.SYSTEM,
         type: MessageType.MESSAGE,
       },
@@ -556,7 +566,7 @@ CRITICAL: Keep responses minimal, conversational, and topic-focused.`,
     );
 
     // Map to the expected format for the response schema, including input field and emotion
-    return messages.map((msg) => {
+    return messages.map((msg: any) => {
       // Extract emotion from metadata if present
       const metadata = msg.metadata || {};
       const emotion = (metadata as any).emotion || "neutral";
