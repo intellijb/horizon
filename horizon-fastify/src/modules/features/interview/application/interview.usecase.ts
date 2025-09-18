@@ -620,11 +620,28 @@ CRITICAL: Keep responses minimal, conversational, and topic-focused.`
     // Get raw message records from the database
     const messages = await this.conversationService.getMessageRecords(
       conversationId,
-      limit
+      limit + 1  // Get one extra to account for potential filtering
     );
 
+    // Filter out system prompts (like the initial greeting generation prompt)
+    const filteredMessages = messages.filter((msg: any) => {
+      // Check if this is the initial greeting prompt
+      if (msg.input && typeof msg.input === 'object' && msg.input.message) {
+        const inputMessage = String(msg.input.message);
+        // Filter out messages that are prompts for generating greetings
+        if (inputMessage.includes('Generate a warm, professional interview greeting') ||
+            inputMessage.includes('INSTRUCTIONS:') && inputMessage.includes('greeting')) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    // Limit to requested number after filtering
+    const limitedMessages = filteredMessages.slice(0, limit);
+
     // Map to the expected format for the response schema, including input field and emotion
-    return messages.map((msg: any) => {
+    return limitedMessages.map((msg: any) => {
       // Extract emotion from metadata if present
       const metadata = msg.metadata || {};
       const emotion = (metadata as any).emotion || "neutral";
