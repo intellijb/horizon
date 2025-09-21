@@ -96,6 +96,24 @@ services:
       start_period: 10s
     networks: [horizon_network]
 
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    container_name: horizon_dynamodb
+    restart: unless-stopped
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /data"
+    volumes:
+      # Production persistent data storage
+      - ./docker/dynamodb/data:/data
+    ports:
+      # Bind to localhost only for security (use SSH tunnel for remote access)
+      - "127.0.0.1:${DYNAMODB_PORT:-20800}:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [horizon_network]
+
 networks:
   horizon_network:
     name: horizon_network

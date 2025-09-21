@@ -32,6 +32,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.893.0",
+    "@aws-sdk/lib-dynamodb": "^3.893.0",
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^10.1.0",
     "@fastify/env": "^5.0.2",

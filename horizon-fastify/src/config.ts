@@ -91,6 +91,12 @@ const envSchema = z.object({
   GRAPHQL_PLAYGROUND: z.coerce.boolean().default(false),
   GRAPHQL_INTROSPECTION: z.coerce.boolean().default(false),
   GRAPHQL_QUERY_DEPTH_LIMIT: z.coerce.number().int().positive().default(10),
+
+  // DynamoDB Configuration
+  DYNAMODB_ENDPOINT: z.string().optional(),
+  AWS_REGION: z.string().default('us-east-1'),
+  AWS_ACCESS_KEY_ID: z.string().optional(),
+  AWS_SECRET_ACCESS_KEY: z.string().optional(),
 });
 
 function loadEnvironment(): z.infer<typeof envSchema> {
@@ -264,6 +270,14 @@ export const configSchema = {
   },
 } as const;
 
+// DynamoDB configuration
+export const dynamoDbConfig = {
+  endpoint: config.DYNAMODB_ENDPOINT,
+  region: config.AWS_REGION,
+  accessKeyId: config.AWS_ACCESS_KEY_ID,
+  secretAccessKey: config.AWS_SECRET_ACCESS_KEY,
+} as const;
+
 // Configuration summary for debugging
 export function logConfigSummary() {
   const summary = {
@@ -275,9 +289,10 @@ export function logConfigSummary() {
       swagger: config.ENABLE_SWAGGER,
       sentry: !!config.SENTRY_DSN,
       smtp: !!config.SMTP_HOST,
+      dynamodb: !!config.DYNAMODB_ENDPOINT,
     },
   };
-  
+
   console.log('📋 Configuration Summary:');
   console.log(JSON.stringify(summary, null, 2));
 }

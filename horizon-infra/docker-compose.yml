@@ -38,6 +38,23 @@ services:
       retries: 5
     restart: unless-stopped
 
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    container_name: horizon_dynamodb
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /data"
+    volumes:
+      - ./docker/dynamodb/data:/data
+    ports:
+      - "${DYNAMODB_PORT:-20800}:8000"
+    networks:
+      - horizon_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
 networks:
   horizon_network:
     name: horizon_network
