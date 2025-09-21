@@ -23,6 +23,7 @@ export interface IntelligenceRepository {
   // Inputs
   createInput(topicId: string, data: Record<string, any>, status?: "active" | "archived" | "deleted"): Promise<IntelligenceTopicInput>
   getTopicInputs(topicId: string, status?: "active" | "archived" | "deleted"): Promise<IntelligenceTopicInput[]>
+  updateInput(id: string, data: Record<string, any>): Promise<IntelligenceTopicInput | null>
   updateInputStatus(id: string, status: "active" | "archived" | "deleted"): Promise<IntelligenceTopicInput | null>
   deleteInput(id: string): Promise<boolean>
 

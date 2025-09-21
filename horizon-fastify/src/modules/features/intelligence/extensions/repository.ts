@@ -156,6 +156,22 @@ export class DrizzleIntelligenceRepository implements IntelligenceRepository {
     return results as IntelligenceTopicInput[]
   }
 
+  async updateInput(
+    id: string,
+    data: Record<string, any>
+  ): Promise<IntelligenceTopicInput | null> {
+    const [updated] = await this.db
+      .update(schema.intelligenceTopicInputs)
+      .set({
+        data,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.intelligenceTopicInputs.id, id))
+      .returning()
+
+    return updated ? (updated as IntelligenceTopicInput) : null
+  }
+
   async updateInputStatus(
     id: string,
     status: "active" | "archived" | "deleted"

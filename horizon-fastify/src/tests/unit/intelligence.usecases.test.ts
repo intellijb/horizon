@@ -20,6 +20,7 @@ describe("IntelligenceUseCases", () => {
       deleteSchema: jest.fn(),
       createInput: jest.fn(),
       getTopicInputs: jest.fn(),
+      updateInput: jest.fn(),
       updateInputStatus: jest.fn(),
       deleteInput: jest.fn(),
       createConversation: jest.fn(),

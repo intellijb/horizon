@@ -157,6 +157,29 @@ const intelligenceRoutes: FastifyPluginAsync = async (fastify) => {
     }
   })
 
+  // Update input data
+  app.put("/inputs/:inputId", {
+    schema: {
+      params: z.object({
+        inputId: z.string(),
+      }),
+      body: z.object({
+        data: z.record(z.string(), z.any()),
+      }),
+    },
+  }, async (request, reply) => {
+    try {
+      const input = await useCases.updateInput({
+        id: request.params.inputId,
+        data: request.body.data,
+      })
+      return reply.send(input)
+    } catch (error) {
+      app.log.error(error)
+      return reply.code(404).send({ error: error.message })
+    }
+  })
+
   // Update input status
   app.patch("/inputs/:inputId/status", {
     schema: {

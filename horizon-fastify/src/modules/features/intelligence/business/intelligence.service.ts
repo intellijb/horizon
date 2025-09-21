@@ -120,6 +120,17 @@ export class IntelligenceService {
     return this.repository.getTopicInputs(topicId, status)
   }
 
+  async updateInput(
+    id: string,
+    data: Record<string, any>
+  ): Promise<IntelligenceTopicInput> {
+    const updated = await this.repository.updateInput(id, data)
+    if (!updated) {
+      throw new Error(IntelligenceErrors.INPUT_NOT_FOUND)
+    }
+    return updated
+  }
+
   async updateInputStatus(
     id: string,
     status: "active" | "archived" | "deleted"

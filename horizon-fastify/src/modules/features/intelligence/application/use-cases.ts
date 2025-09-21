@@ -20,6 +20,11 @@ export const AddInputSchema = z.object({
   status: z.enum(["active", "archived", "deleted"]).optional(),
 })
 
+export const UpdateInputSchema = z.object({
+  id: z.string().min(1),
+  data: z.record(z.string(), z.any()),
+})
+
 export const UpdateInputStatusSchema = z.object({
   id: z.string().min(1),
   status: z.enum(["active", "archived", "deleted"]),
@@ -94,6 +99,11 @@ export class IntelligenceUseCases {
 
   async getTopicInputs(topicId: string, status?: "active" | "archived" | "deleted") {
     return this.service.getTopicInputs(topicId, status)
+  }
+
+  async updateInput(data: z.infer<typeof UpdateInputSchema>) {
+    const validated = UpdateInputSchema.parse(data)
+    return this.service.updateInput(validated.id, validated.data)
   }
 
   async updateInputStatus(data: z.infer<typeof UpdateInputStatusSchema>) {
