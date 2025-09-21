@@ -24,6 +24,7 @@ import healthRoutes from "@/modules/features/health/routes"
 import authRoutes from "@/routes/auth.route"
 import interviewRoutes from "@/routes/interview.route"
 import mapsRoutes from "@/routes/maps.route"
+import intelligenceRoutes from "@/routes/intelligence.route"
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -115,6 +116,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(healthRoutes)
   await app.register(interviewRoutes, { prefix: '/api' })
   await app.register(mapsRoutes)
+  await app.register(intelligenceRoutes, { prefix: '/api/intelligence' })
 
   return app
 }
