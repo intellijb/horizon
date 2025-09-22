@@ -3,11 +3,13 @@ import { z } from "zod"
 import { ZodTypeProvider } from "fastify-type-provider-zod"
 import { IntelligenceUseCases } from "@modules/features/intelligence/application/use-cases"
 import { DrizzleIntelligenceRepository } from "@modules/features/intelligence/extensions/repository"
+import { IntelligenceController } from "@modules/features/intelligence/application/intelligence.controller"
 
 const intelligenceRoutes: FastifyPluginAsync = async (fastify) => {
   const app = fastify.withTypeProvider<ZodTypeProvider>()
   const repository = new DrizzleIntelligenceRepository(fastify.db)
   const useCases = new IntelligenceUseCases(repository)
+  const controller = new IntelligenceController(fastify.db)
 
   // Create topic
   app.post("/topics", {
@@ -241,6 +243,87 @@ const intelligenceRoutes: FastifyPluginAsync = async (fastify) => {
     } catch (error) {
       app.log.error(error)
       return reply.code(404).send({ error: error.message })
+    }
+  })
+
+  // Create chat session with OpenAI conversation
+  app.post("/chat/sessions", {
+    schema: {
+      body: z.object({
+        topicId: z.string(),
+        persona: z.object({
+          name: z.string(),
+          instructions: z.string().optional(),
+          role: z.enum(["system", "developer"]).optional(),
+        }).optional(),
+        initialMessage: z.string().optional(),
+        metadata: z.record(z.string(), z.string()).optional(),
+      }),
+    },
+  }, async (request, reply) => {
+    try {
+      const result = await controller.createChatSession(request.body)
+      if (result.statusCode >= 400) {
+        return reply.code(result.statusCode).send({ error: result.error })
+      }
+      return reply.code(result.statusCode).send(result.data)
+    } catch (error) {
+      app.log.error(error)
+      return reply.code(500).send({ error: error.message })
+    }
+  })
+
+  // Send message in a conversation
+  app.post("/topics/:topicId/conversations/:conversationId/messages", {
+    schema: {
+      params: z.object({
+        topicId: z.string(),
+        conversationId: z.string(),
+      }),
+      body: z.object({
+        message: z.string(),
+        temperature: z.number().min(0).max(2).optional(),
+      }),
+    },
+  }, async (request, reply) => {
+    try {
+      const result = await controller.sendMessage({
+        topicId: request.params.topicId,
+        conversationId: request.params.conversationId,
+        message: request.body.message,
+        temperature: request.body.temperature,
+      })
+      if (result.statusCode >= 400) {
+        return reply.code(result.statusCode).send({ error: result.error })
+      }
+      return reply.send(result.data)
+    } catch (error) {
+      app.log.error(error)
+      return reply.code(500).send({ error: error.message })
+    }
+  })
+
+  // Get conversation history
+  app.get("/topics/:topicId/conversations/:conversationId/history", {
+    schema: {
+      params: z.object({
+        topicId: z.string(),
+        conversationId: z.string(),
+      }),
+    },
+  }, async (request, reply) => {
+    try {
+      const result = await controller.getConversationHistory(
+        request.params.topicId,
+        request.params.conversationId
+      )
+      if (result.statusCode >= 400) {
+        return reply.code(result.statusCode).send({ error: result.error })
+      }
+      return reply.send(result.data)
+    } catch (error) {
+      app.log.error(error)
+      return reply.code(500).send({ error: error.message })
     }
   })
 
