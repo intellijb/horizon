@@ -105,7 +105,7 @@ export const dynamoDbDocumentOps = {
     })
 
     // DynamoDB limits batch writes to 25 items
-    const chunks = []
+    const chunks: typeof requests[] = []
     for (let i = 0; i < requests.length; i += 25) {
       chunks.push(requests.slice(i, i + 25))
     }
