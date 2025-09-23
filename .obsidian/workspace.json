@@ -11,10 +11,14 @@
             "id": "285dbbd7cfcdefc2",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "horizon-fastify/documents/01-architecture/architecture-suggestions-korean.md",
+                "mode": "preview",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "New tab"
+              "title": "architecture-suggestions-korean"
             }
           }
         ]
@@ -162,8 +166,18 @@
       "bases:Create new base": false
     }
   },
-  "active": "6fe6c5d42e652adb",
+  "active": "285dbbd7cfcdefc2",
   "lastOpenFiles": [
+    "horizon-fastify/src/modules/platform/events/brokers/redis-broker.ts",
+    "horizon-fastify/src/modules/platform/events/brokers/base-broker.ts",
+    "horizon-fastify/src/modules/platform/events/brokers",
+    "horizon-fastify/src/modules/platform/events/core/domain-event.ts",
+    "horizon-fastify/src/modules/platform/events/core/interfaces.ts",
+    "horizon-fastify/src/modules/platform/events/core/types.ts",
+    "horizon-fastify/src/modules/platform/events/core",
+    "horizon-fastify/src/modules/platform/events",
+    "horizon-fastify/documents/00-overview/conventions.md",
+    "horizon-fastify/documents/00-overview/ai-assistant-instructions.md",
     "documents/README.md",
     "documents",
     "horizon-fastify/CLAUDE.md"
