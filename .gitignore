@@ -1,1 +1,4 @@
-.obsidian/
+# Obsidian - ignore everything except TypeScript files
+.obsidian/*
+!.obsidian/**/*.ts
+!.obsidian/**/*.tsx
