@@ -168,6 +168,10 @@
   },
   "active": "285dbbd7cfcdefc2",
   "lastOpenFiles": [
+    "horizon-fastify/src/tests/unit/events/hybrid-event-bus.test.ts",
+    "horizon-fastify/src/tests/unit/events/event-bus.test.ts",
+    "horizon-fastify/src/tests/unit/events",
+    "horizon-fastify/src/modules/features/auth/application/login.usecase.enhanced.ts",
     "horizon-fastify/src/modules/platform/events/brokers/redis-broker.ts",
     "horizon-fastify/src/modules/platform/events/brokers/base-broker.ts",
     "horizon-fastify/src/modules/platform/events/brokers",
@@ -175,11 +179,9 @@
     "horizon-fastify/src/modules/platform/events/core/interfaces.ts",
     "horizon-fastify/src/modules/platform/events/core/types.ts",
     "horizon-fastify/src/modules/platform/events/core",
-    "horizon-fastify/src/modules/platform/events",
     "horizon-fastify/documents/00-overview/conventions.md",
     "horizon-fastify/documents/00-overview/ai-assistant-instructions.md",
     "documents/README.md",
-    "documents",
     "horizon-fastify/CLAUDE.md"
   ]
 }
