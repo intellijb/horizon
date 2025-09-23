@@ -1,0 +1,32 @@
+{
+  "file-explorer:new-file": [
+    {
+      "modifiers": ["Mod"],
+      "key": "n"
+    }
+  ],
+  "switcher:open": [
+    {
+      "modifiers": ["Mod"],
+      "key": "p"
+    }
+  ],
+  "command-palette:open": [
+    {
+      "modifiers": ["Mod", "Shift"],
+      "key": "p"
+    }
+  ],
+  "markdown:toggle-preview": [
+    {
+      "modifiers": ["Mod"],
+      "key": "e"
+    }
+  ],
+  "file-explorer:move-file": [
+    {
+      "modifiers": ["Mod", "Shift"],
+      "key": "m"
+    }
+  ]
+}

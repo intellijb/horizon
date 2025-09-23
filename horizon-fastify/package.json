@@ -25,7 +25,8 @@
     "test:watch": "npm run jest -- --watch",
     "test:coverage": "npm run jest -- --coverage",
     "test:e2e": "npm run jest -- --config=src/tests/e2e/jest.config.mjs",
-    "test:e2e:auth": "npm run jest -- --config=src/tests/e2e/jest.config.mjs --testPathPattern=auth"
+    "test:e2e:auth": "npm run jest -- --config=src/tests/e2e/jest.config.mjs --testPathPattern=auth",
+    "gh:actions": "open https://github.com/intellijb/horizon/actions"
   },
   "keywords": [],
   "author": "",

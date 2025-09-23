@@ -1,0 +1,27 @@
+{
+  "alwaysUpdateLinks": true,
+  "promptDelete": false,
+  "showFrontmatter": true,
+  "foldHeading": true,
+  "foldIndent": true,
+  "showLineNumber": true,
+  "showInlineTitle": true,
+  "defaultViewMode": "preview",
+  "strictLineBreaks": false,
+  "readableLineLength": false,
+  "attachmentFolderPath": "./documents/horizon-fastify/docs/assets",
+  "newFileLocation": "folder",
+  "newFileFolderPath": "documents/horizon-fastify/docs/drafts",
+  "useMarkdownLinks": false,
+  "showUnsupportedFiles": true,
+  "userIgnoreFilters": [
+    "node_modules/",
+    "dist/",
+    "build/",
+    ".git/",
+    "horizon-fastify/node_modules/",
+    "horizon-fastify/dist/"
+  ],
+  "livePreview": true,
+  "focusNewTab": true
+}
