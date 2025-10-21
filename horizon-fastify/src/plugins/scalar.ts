@@ -1,7 +1,7 @@
-import fp from "fastify-plugin"
-import swagger from "@fastify/swagger"
-import scalar from "@scalar/fastify-api-reference"
-import { FastifyInstance } from "fastify"
+import fp from "fastify-plugin";
+import swagger from "@fastify/swagger";
+import scalar from "@scalar/fastify-api-reference";
+import { FastifyInstance } from "fastify";
 
 async function scalarPlugin(fastify: FastifyInstance) {
   // Register Swagger without Zod transform temporarily
@@ -15,7 +15,7 @@ async function scalarPlugin(fastify: FastifyInstance) {
       },
       servers: [
         {
-          url: process.env.API_BASE_URL || "http://localhost:20000",
+          url: process.env.API_BASE_URL || "http://api.intellijb.com:20000",
         },
       ],
       tags: [
@@ -24,7 +24,7 @@ async function scalarPlugin(fastify: FastifyInstance) {
         { name: "health", description: "Health check endpoints" },
       ],
     },
-  })
+  });
 
   // Register Scalar API Reference
   await fastify.register(scalar, {
@@ -34,11 +34,11 @@ async function scalarPlugin(fastify: FastifyInstance) {
       hideModels: false,
       hideDownloadButton: false,
     },
-  })
+  });
 
-  fastify.log.info("API documentation available at /docs")
+  fastify.log.info("API documentation available at /docs");
 }
 
 export default fp(scalarPlugin, {
   name: "scalar",
-})
+});
