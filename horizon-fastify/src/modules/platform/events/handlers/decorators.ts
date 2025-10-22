@@ -24,7 +24,7 @@ export function EventHandler(...eventTypes: Constructor[]): ClassDecorator {
         // Auto-register with the global registry
         const registry = EventHandlerRegistry.getInstance();
         for (const eventType of eventTypes) {
-          registry.register(eventType, this as IEventHandler);
+          registry.register(eventType, this as unknown as IEventHandler);
         }
       }
     } as any;

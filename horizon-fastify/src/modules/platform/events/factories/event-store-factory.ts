@@ -46,7 +46,7 @@ export class EventStoreFactory {
   }
 
   private static getStoreKey(config: EventStoreConfig): string {
-    const parts = [config.type];
+    const parts: string[] = [config.type];
 
     if (config.redis) {
       parts.push(`ttl:${config.redis.ttl}`, `max:${config.redis.maxEvents}`);

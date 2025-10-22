@@ -257,14 +257,14 @@ export class SuspiciousActivityDetectedEvent extends DomainEvent {
   readonly priority = EventPriority.CRITICAL;
 
   constructor(
-    public readonly userId: string | null,
+    public readonly userId: string | undefined,
     public readonly activityType: string,
     public readonly details: Record<string, any>,
     public readonly ipAddress?: string,
     public readonly userAgent?: string,
     metadata?: Partial<IEventMetadata>
   ) {
-    super({ ...metadata, userId: userId || undefined });
+    super({ ...metadata, userId });
   }
 
   toJSON(): any {

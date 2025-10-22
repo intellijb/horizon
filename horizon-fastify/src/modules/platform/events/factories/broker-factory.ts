@@ -56,7 +56,7 @@ export class BrokerFactory {
       return 'in-memory';
     }
 
-    const parts = [config.type];
+    const parts: string[] = [config.type];
 
     if (config.redis) {
       parts.push(`${config.redis.host}:${config.redis.port}:${config.redis.db || 0}`);

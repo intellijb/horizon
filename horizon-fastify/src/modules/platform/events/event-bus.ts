@@ -153,7 +153,8 @@ export class EventBus extends EventEmitter implements IEventBus {
 
   private async handleIncomingMessage(eventName: string, message: Buffer): Promise<void> {
     try {
-      const event = this.serializer.deserialize(message);
+      // TODO: Need to pass event type to deserialize - using Object as placeholder
+      const event = this.serializer.deserialize(message, Object as any);
       const handlers = this.handlers.get(eventName);
 
       if (handlers) {

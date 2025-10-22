@@ -120,7 +120,7 @@ export class LoginUseCaseWithEvents {
       await this.eventBus.publish(new DeviceAddedEvent(
         user.id,
         device.id,
-        device.deviceName,
+        device.name,
         deviceType,
         false,
         { correlationId }
@@ -169,7 +169,7 @@ export class LoginUseCaseWithEvents {
       user.id,
       user.email,
       device.id,
-      device.deviceName,
+      device.name,
       request.ipAddress,
       request.userAgent,
       'password',
@@ -257,7 +257,7 @@ export class LoginUseCaseWithEvents {
       'Inactive account login attempt',
       {
         email: user.email,
-        accountStatus: user.status,
+        accountStatus: user.isActive ? 'active' : 'inactive',
       },
       request.ipAddress,
       request.userAgent,
@@ -271,8 +271,9 @@ export class LoginUseCaseWithEvents {
     correlationId: string
   ): Promise<void> {
     // Check for unusual login patterns
-    const lastLogin = await this.repository.getLastSuccessfulLogin(user.id)
-
+    // TODO: Implement getLastSuccessfulLogin in repository
+    // const lastLogin = await this.repository.getLastSuccessfulLogin(user.id)
+    /*
     if (lastLogin) {
       // Check for geographic anomaly (simplified check)
       if (lastLogin.ipAddress && request.ipAddress &&
@@ -307,6 +308,7 @@ export class LoginUseCaseWithEvents {
         ))
       }
     }
+    */
   }
 
   private isSignificantLocationChange(lastIp: string, currentIp: string): boolean {

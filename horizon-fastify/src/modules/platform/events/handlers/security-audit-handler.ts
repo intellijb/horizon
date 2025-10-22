@@ -37,7 +37,6 @@ interface SecurityLog {
 export class SecurityAuditHandler extends BaseEventHandler {
   private logs: SecurityLog[] = [];
 
-  @HandleEvent()
   async handle(event: any, metadata?: IEventMetadata): Promise<void> {
     const log = this.createSecurityLog(event, metadata);
 
@@ -155,8 +154,8 @@ export class SecurityAuditHandler extends BaseEventHandler {
     const message = `${prefix} ${log.eventType}`;
 
     const logData = {
-      timestamp: log.timestamp.toISOString(),
       ...log,
+      timestamp: log.timestamp.toISOString(),
     };
 
     switch (log.severity) {
@@ -278,10 +277,10 @@ export class SecurityAuditHandler extends BaseEventHandler {
         filteredLogs = filteredLogs.filter(log => log.severity === filters.severity);
       }
       if (filters.startDate) {
-        filteredLogs = filteredLogs.filter(log => log.timestamp >= filters.startDate);
+        filteredLogs = filteredLogs.filter(log => log.timestamp >= filters.startDate!);
       }
       if (filters.endDate) {
-        filteredLogs = filteredLogs.filter(log => log.timestamp <= filters.endDate);
+        filteredLogs = filteredLogs.filter(log => log.timestamp <= filters.endDate!);
       }
     }
 

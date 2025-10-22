@@ -1,8 +1,8 @@
-import { createDatabase } from "./src/modules/platform/database"
-import { categories, topics, interviewers } from "./src/modules/features/interview/extensions/schema/interview.schema"
+import { getDatabase } from "@modules/platform/database"
+import { categories, topics, interviewers } from "../extensions/schema/interview.schema"
 
 async function seedTestData() {
-  const db = createDatabase()
+  const db = getDatabase()
 
   console.log("🌱 Seeding test interview data with UUIDs...")
 

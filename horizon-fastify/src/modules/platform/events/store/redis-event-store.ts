@@ -17,12 +17,20 @@ export class RedisEventStore implements IEventStore {
     clientOrConfig?: Redis | RedisEventStoreConfig,
     config?: RedisEventStoreConfig
   ) {
-    if (clientOrConfig && 'ttl' in clientOrConfig) {
+    // Check if first argument is a config object (has ttl, maxEvents, or snapshotInterval)
+    const isConfig = clientOrConfig && (
+      'ttl' in clientOrConfig ||
+      'maxEvents' in clientOrConfig ||
+      'snapshotInterval' in clientOrConfig
+    );
+
+    if (isConfig) {
       // Config passed as first parameter
-      this.config = clientOrConfig;
+      this.config = clientOrConfig as RedisEventStoreConfig;
+      this.client = null;
     } else if (clientOrConfig) {
       // Redis client passed
-      this.client = clientOrConfig as Redis;
+      this.client = clientOrConfig as unknown as Redis;
       this.config = config || {};
     } else {
       this.config = config || {};
@@ -215,12 +223,15 @@ export class RedisEventStore implements IEventStore {
     const client = await this.getClient();
     const snapshotKey = this.getSnapshotKey(snapshot.aggregateId);
 
-    await client.set(
-      snapshotKey,
-      JSON.stringify(snapshot),
-      'EX',
-      this.config.ttl
-    );
+    if (this.config.ttl) {
+      await client.setex(
+        snapshotKey,
+        this.config.ttl,
+        JSON.stringify(snapshot)
+      );
+    } else {
+      await client.set(snapshotKey, JSON.stringify(snapshot));
+    }
   }
 
   async getSnapshot(aggregateId: string): Promise<AggregateSnapshot | null> {

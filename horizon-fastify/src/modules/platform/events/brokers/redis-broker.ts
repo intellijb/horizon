@@ -10,13 +10,13 @@ export class RedisBroker extends BaseBroker {
   private config: BrokerConfig['redis'];
   private subscribedTopics: Set<string> = new Set();
 
-  constructor(config: BrokerConfig['redis'] = {}) {
+  constructor(config?: BrokerConfig['redis']) {
     super();
     this.config = {
-      host: config.host || 'localhost',
-      port: config.port || 6379,
-      password: config.password,
-      db: config.db || 0,
+      host: config?.host || 'localhost',
+      port: config?.port || 6379,
+      password: config?.password,
+      db: config?.db || 0,
     };
   }
 

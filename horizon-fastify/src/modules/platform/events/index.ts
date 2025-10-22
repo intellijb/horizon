@@ -17,6 +17,7 @@ export { RedisEventStore } from './store/redis-event-store';
 export { InMemoryEventStore } from './store/in-memory-event-store';
 
 // Factory exports
+import { EventBusFactory } from './factories/event-bus-factory';
 export { BrokerFactory } from './factories/broker-factory';
 export { EventBusFactory } from './factories/event-bus-factory';
 export { EventStoreFactory } from './factories/event-store-factory';
