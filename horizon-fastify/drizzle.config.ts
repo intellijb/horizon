@@ -10,5 +10,5 @@ export default defineConfig({
   },
   verbose: true,
   strict: true,
-  schemaFilter: ['auth', 'app', 'public', 'llm'],
+  schemaFilter: ['auth', 'app', 'public', 'llm', 'learning'],
 });

@@ -1,0 +1,45 @@
+/**
+ * Error codes and constants for the learning module
+ */
+
+export enum LearningErrorCode {
+  // Category errors
+  CATEGORY_NOT_FOUND = "CATEGORY_NOT_FOUND",
+  CATEGORY_ALREADY_EXISTS = "CATEGORY_ALREADY_EXISTS",
+  CATEGORY_HAS_CHILDREN = "CATEGORY_HAS_CHILDREN",
+
+  // Problem errors
+  PROBLEM_NOT_FOUND = "PROBLEM_NOT_FOUND",
+  PROBLEM_ALREADY_EXISTS = "PROBLEM_ALREADY_EXISTS",
+  INVALID_DIFFICULTY = "INVALID_DIFFICULTY",
+
+  // Submission errors
+  SUBMISSION_NOT_FOUND = "SUBMISSION_NOT_FOUND",
+  SUBMISSION_ALREADY_EVALUATED = "SUBMISSION_ALREADY_EVALUATED",
+  MAX_ATTEMPTS_REACHED = "MAX_ATTEMPTS_REACHED",
+
+  // Evaluation errors
+  EVALUATION_NOT_FOUND = "EVALUATION_NOT_FOUND",
+  EVALUATION_ALREADY_EXISTS = "EVALUATION_ALREADY_EXISTS",
+  INVALID_SCORE = "INVALID_SCORE",
+
+  // Schedule errors
+  SCHEDULE_NOT_FOUND = "SCHEDULE_NOT_FOUND",
+  SCHEDULE_ALREADY_EXISTS = "SCHEDULE_ALREADY_EXISTS",
+  INVALID_SCHEDULE_DATE = "INVALID_SCHEDULE_DATE",
+
+  // General errors
+  VALIDATION_ERROR = "VALIDATION_ERROR",
+  INTERNAL_ERROR = "INTERNAL_ERROR",
+}
+
+export class LearningError extends Error {
+  constructor(
+    public code: LearningErrorCode,
+    message: string,
+    public statusCode: number = 400
+  ) {
+    super(message)
+    this.name = "LearningError"
+  }
+}

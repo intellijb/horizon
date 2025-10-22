@@ -26,6 +26,7 @@ import interviewRoutes from "@/routes/interview.route"
 import mapsRoutes from "@/routes/maps.route"
 import intelligenceRoutes from "@/routes/intelligence.route"
 import { journalRoutes } from "@/routes/journal.route"
+import { learningRoutes } from "@/routes/learning.route"
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -119,6 +120,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(mapsRoutes)
   await app.register(intelligenceRoutes, { prefix: '/api/intelligence' })
   await app.register(journalRoutes, { prefix: '/api/journal' })
+  await app.register(learningRoutes, { prefix: '/api/learning' })
 
   return app
 }
