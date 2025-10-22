@@ -14,7 +14,10 @@ export interface Category {
   name: string
   description?: string
   parentId?: string
+  level?: number
+  path?: string
   order: number
+  metadata?: Record<string, any>
   createdAt: Date
   updatedAt: Date
 }
@@ -42,7 +45,9 @@ export interface Submission {
   attemptNumber: number
   answer: string
   isCorrect: boolean
+  timeSpent?: number
   aiEvaluationId?: string
+  metadata?: Record<string, any>
   submittedAt: Date
 }
 
@@ -65,8 +70,12 @@ export interface Schedule {
   easeFactor: number // SM-2 ease factor (default 2.5)
   interval: number // Days until next review
   repetitions: number // Number of successful repetitions
+  lastReviewedAt?: Date
   nextReviewDate: Date
-  lastReviewDate?: Date
+  nextReviewAt?: Date // Alternative naming
+  totalAttempts?: number
+  correctAttempts?: number
+  averageAccuracy?: number
   createdAt: Date
   updatedAt: Date
 }

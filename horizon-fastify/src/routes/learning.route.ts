@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify"
-import { LearningService } from "@modules/features/learning/business/learning.service"
+import { LearningController } from "@modules/features/learning/application/learning.controller"
 import {
   createCategorySchema,
   updateCategorySchema,
@@ -33,7 +33,7 @@ import {
  * - Evaluations (AI-based feedback)
  */
 export async function learningRoutes(fastify: FastifyInstance) {
-  const learningService = new LearningService(fastify.db)
+  const controller = new LearningController(fastify.db)
 
   // ========================================
   // Category Routes
@@ -54,8 +54,8 @@ export async function learningRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    const categories = await learningService.getAllCategories()
-    return reply.send(categories)
+    const result = await controller.listCategories()
+    return reply.send(result.data)
   })
 
   // Get category by ID
@@ -89,40 +89,8 @@ export async function learningRoutes(fastify: FastifyInstance) {
       }
     },
     async (request, reply) => {
-      const category = await learningService.getCategory(request.params.id)
-      if (!category) {
-        return reply.status(404).send({ error: "Category not found" })
-      }
-      return reply.send(category)
-    }
-  )
-
-  // Get child categories
-  fastify.get<{ Params: { id: string } }>(
-    "/categories/:id/children",
-    {
-      schema: {
-        tags: ['Learning'],
-        summary: 'Get child categories',
-        description: 'Get all child categories of a parent category',
-        params: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', format: 'uuid' }
-          },
-          required: ['id']
-        },
-        response: {
-          200: {
-            description: 'Child categories list',
-            type: 'array',
-          }
-        }
-      }
-    },
-    async (request, reply) => {
-      const categories = await learningService.getCategoriesByParent(request.params.id)
-      return reply.send(categories)
+      const result = await controller.getCategory(request.params.id)
+      return reply.status(result.statusCode).send(result.data || { error: result.error })
     }
   )
 
@@ -151,12 +119,8 @@ export async function learningRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      try {
-        const category = await learningService.createCategory(request.body)
-        return reply.status(201).send(category)
-      } catch (error) {
-        return reply.status(400).send({ error: "Failed to create category" })
-      }
+      const result = await controller.createCategory(request.body)
+      return reply.status(result.statusCode).send(result.data || { error: result.error })
     }
   )
 
@@ -199,18 +163,8 @@ export async function learningRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      try {
-        const category = await learningService.updateCategory(
-          request.params.id,
-          request.body
-        )
-        if (!category) {
-          return reply.status(404).send({ error: "Category not found" })
-        }
-        return reply.send(category)
-      } catch (error) {
-        return reply.status(400).send({ error: "Failed to update category" })
-      }
+      const result = await controller.updateCategory(request.params.id, request.body)
+      return reply.status(result.statusCode).send(result.data || { error: result.error })
     }
   )
 
@@ -244,12 +198,11 @@ export async function learningRoutes(fastify: FastifyInstance) {
       }
     },
     async (request, reply) => {
-      try {
-        await learningService.deleteCategory(request.params.id)
+      const result = await controller.deleteCategory(request.params.id)
+      if (result.statusCode === 204) {
         return reply.status(204).send()
-      } catch (error) {
-        return reply.status(400).send({ error: "Failed to delete category" })
       }
+      return reply.status(result.statusCode).send({ error: result.error })
     }
   )
 
@@ -272,8 +225,8 @@ export async function learningRoutes(fastify: FastifyInstance) {
       }
     },
   }, async (request, reply) => {
-    const problems = await learningService.getAllProblems()
-    return reply.send(problems)
+    const result = await controller.listProblems()
+    return reply.send(result.data)
   })
 
   // Get problem by ID
@@ -307,76 +260,8 @@ export async function learningRoutes(fastify: FastifyInstance) {
       }
     },
     async (request, reply) => {
-      const problem = await learningService.getProblem(request.params.id)
-      if (!problem) {
-        return reply.status(404).send({ error: "Problem not found" })
-      }
-      return reply.send(problem)
-    }
-  )
-
-  // Get problems by category
-  fastify.get<{ Querystring: { categoryId: string } }>(
-    "/problems/by-category",
-    {
-      schema: {
-        tags: ['Learning'],
-        summary: 'Get problems by category',
-        description: 'Get all problems in a specific category',
-        querystring: {
-          type: 'object',
-          properties: {
-            categoryId: { type: 'string', format: 'uuid' }
-          },
-          required: ['categoryId']
-        },
-        response: {
-          200: {
-            description: 'Problems list',
-            type: 'array',
-          }
-        }
-      }
-    },
-    async (request, reply) => {
-      const problems = await learningService.getProblemsByCategory(
-        request.query.categoryId
-      )
-      return reply.send(problems)
-    }
-  )
-
-  // Get problems by difficulty
-  fastify.get<{ Querystring: { difficulty: string } }>(
-    "/problems/by-difficulty",
-    {
-      schema: {
-        tags: ['Learning'],
-        summary: 'Get problems by difficulty',
-        description: 'Get all problems with a specific difficulty level',
-        querystring: {
-          type: 'object',
-          properties: {
-            difficulty: {
-              type: 'string',
-              enum: ['beginner', 'intermediate', 'advanced', 'expert']
-            }
-          },
-          required: ['difficulty']
-        },
-        response: {
-          200: {
-            description: 'Problems list',
-            type: 'array',
-          }
-        }
-      }
-    },
-    async (request, reply) => {
-      const problems = await learningService.getProblemsByDifficulty(
-        request.query.difficulty as any
-      )
-      return reply.send(problems)
+      const result = await controller.getProblem(request.params.id)
+      return reply.status(result.statusCode).send(result.data || { error: result.error })
     }
   )
 
@@ -405,12 +290,8 @@ export async function learningRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      try {
-        const problem = await learningService.createProblem(request.body)
-        return reply.status(201).send(problem)
-      } catch (error) {
-        return reply.status(400).send({ error: "Failed to create problem" })
-      }
+      const result = await controller.createProblem(request.body)
+      return reply.status(result.statusCode).send(result.data || { error: result.error })
     }
   )
 
@@ -453,18 +334,8 @@ export async function learningRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      try {
-        const problem = await learningService.updateProblem(
-          request.params.id,
-          request.body
-        )
-        if (!problem) {
-          return reply.status(404).send({ error: "Problem not found" })
-        }
-        return reply.send(problem)
-      } catch (error) {
-        return reply.status(400).send({ error: "Failed to update problem" })
-      }
+      const result = await controller.updateProblem(request.params.id, request.body)
+      return reply.status(result.statusCode).send(result.data || { error: result.error })
     }
   )
 
@@ -498,12 +369,11 @@ export async function learningRoutes(fastify: FastifyInstance) {
       }
     },
     async (request, reply) => {
-      try {
-        await learningService.deleteProblem(request.params.id)
+      const result = await controller.deleteProblem(request.params.id)
+      if (result.statusCode === 204) {
         return reply.status(204).send()
-      } catch (error) {
-        return reply.status(400).send({ error: "Failed to delete problem" })
       }
+      return reply.status(result.statusCode).send({ error: result.error })
     }
   )
 
@@ -526,10 +396,8 @@ export async function learningRoutes(fastify: FastifyInstance) {
       }
     },
   }, async (request, reply) => {
-    const submissions = await learningService.getSubmissionsByUser(
-      request.query.userId
-    )
-    return reply.send(submissions)
+    const result = await controller.listUserSubmissions(request.query.userId)
+    return reply.send(result.data)
   })
 
   // Get submission by ID
@@ -563,44 +431,8 @@ export async function learningRoutes(fastify: FastifyInstance) {
       }
     },
     async (request, reply) => {
-      const submission = await learningService.getSubmission(request.params.id)
-      if (!submission) {
-        return reply.status(404).send({ error: "Submission not found" })
-      }
-      return reply.send(submission)
-    }
-  )
-
-  // Get submissions by problem
-  fastify.get<{ Querystring: { problemId: string; userId?: string } }>(
-    "/submissions/by-problem",
-    {
-      schema: {
-        tags: ['Learning'],
-        summary: 'Get submissions by problem',
-        description: 'Get all submissions for a specific problem',
-        querystring: {
-          type: 'object',
-          properties: {
-            problemId: { type: 'string', format: 'uuid' },
-            userId: { type: 'string', format: 'uuid' }
-          },
-          required: ['problemId']
-        },
-        response: {
-          200: {
-            description: 'Submissions list',
-            type: 'array',
-          }
-        }
-      }
-    },
-    async (request, reply) => {
-      const submissions = await learningService.getSubmissionsByProblem(
-        request.query.problemId,
-        request.query.userId
-      )
-      return reply.send(submissions)
+      const result = await controller.getSubmission(request.params.id)
+      return reply.status(result.statusCode).send(result.data || { error: result.error })
     }
   )
 
@@ -629,130 +461,8 @@ export async function learningRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      try {
-        const submission = await learningService.createSubmission(request.body)
-        return reply.status(201).send(submission)
-      } catch (error) {
-        return reply.status(400).send({ error: "Failed to create submission" })
-      }
-    }
-  )
-
-  // ========================================
-  // Evaluation Routes
-  // ========================================
-
-  // Get evaluation by ID
-  fastify.get<{ Params: { id: string } }>(
-    "/evaluations/:id",
-    {
-      schema: {
-        tags: ['Learning'],
-        summary: 'Get evaluation by ID',
-        description: 'Get a specific AI evaluation',
-        params: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', format: 'uuid' }
-          },
-          required: ['id']
-        },
-        response: {
-          200: {
-            description: 'Evaluation found',
-            type: 'object',
-          },
-          404: {
-            description: 'Evaluation not found',
-            type: 'object',
-            properties: {
-              error: { type: 'string' }
-            }
-          }
-        }
-      }
-    },
-    async (request, reply) => {
-      const evaluation = await learningService.getEvaluation(request.params.id)
-      if (!evaluation) {
-        return reply.status(404).send({ error: "Evaluation not found" })
-      }
-      return reply.send(evaluation)
-    }
-  )
-
-  // Get evaluation by submission
-  fastify.get<{ Querystring: { submissionId: string } }>(
-    "/evaluations/by-submission",
-    {
-      schema: {
-        tags: ['Learning'],
-        summary: 'Get evaluation by submission',
-        description: 'Get the AI evaluation for a specific submission',
-        querystring: {
-          type: 'object',
-          properties: {
-            submissionId: { type: 'string', format: 'uuid' }
-          },
-          required: ['submissionId']
-        },
-        response: {
-          200: {
-            description: 'Evaluation found',
-            type: 'object',
-          },
-          404: {
-            description: 'Evaluation not found',
-            type: 'object',
-            properties: {
-              error: { type: 'string' }
-            }
-          }
-        }
-      }
-    },
-    async (request, reply) => {
-      const evaluation = await learningService.getEvaluationBySubmission(
-        request.query.submissionId
-      )
-      if (!evaluation) {
-        return reply.status(404).send({ error: "Evaluation not found" })
-      }
-      return reply.send(evaluation)
-    }
-  )
-
-  // Create evaluation
-  fastify.post<{ Body: CreateEvaluationDto }>(
-    "/evaluations",
-    {
-      schema: {
-        tags: ['Learning'],
-        summary: 'Create a new evaluation',
-        description: 'Create an AI evaluation for a submission',
-        body: createEvaluationSchema,
-        response: {
-          201: {
-            description: 'Evaluation created successfully',
-            type: 'object',
-          },
-          400: {
-            description: 'Bad request',
-            type: 'object',
-            properties: {
-              error: { type: 'string' }
-            }
-          }
-        }
-      },
-    },
-    async (request, reply) => {
-      try {
-        const evaluation = await learningService.createEvaluation(request.body)
-        return reply.status(201).send(evaluation)
-      } catch (error) {
-        return reply.status(400).send({ error: "Failed to create evaluation" })
-      }
+      const result = await controller.createSubmission(request.body)
+      return reply.status(result.statusCode).send(result.data || { error: result.error })
     }
   )
 
@@ -775,10 +485,8 @@ export async function learningRoutes(fastify: FastifyInstance) {
       }
     },
   }, async (request, reply) => {
-    const schedules = await learningService.getSchedulesByUser(
-      request.query.userId
-    )
-    return reply.send(schedules)
+    const result = await controller.getUserSchedules(request.query.userId)
+    return reply.send(result.data)
   })
 
   // Get due items for review
@@ -796,52 +504,9 @@ export async function learningRoutes(fastify: FastifyInstance) {
       }
     },
   }, async (request, reply) => {
-    const schedules = await learningService.getDueSchedules(request.query.userId)
-    return reply.send(schedules)
+    const result = await controller.getDueReviews(request.query.userId)
+    return reply.send(result.data)
   })
-
-  // Get schedule by problem
-  fastify.get<{ Querystring: { userId: string; problemId: string } }>(
-    "/schedules/by-problem",
-    {
-      schema: {
-        tags: ['Learning'],
-        summary: 'Get schedule by problem',
-        description: 'Get the spaced repetition schedule for a specific problem',
-        querystring: {
-          type: 'object',
-          properties: {
-            userId: { type: 'string', format: 'uuid' },
-            problemId: { type: 'string', format: 'uuid' }
-          },
-          required: ['userId', 'problemId']
-        },
-        response: {
-          200: {
-            description: 'Schedule found',
-            type: 'object',
-          },
-          404: {
-            description: 'Schedule not found',
-            type: 'object',
-            properties: {
-              error: { type: 'string' }
-            }
-          }
-        }
-      }
-    },
-    async (request, reply) => {
-      const schedule = await learningService.getScheduleByProblem(
-        request.query.userId,
-        request.query.problemId
-      )
-      if (!schedule) {
-        return reply.status(404).send({ error: "Schedule not found" })
-      }
-      return reply.send(schedule)
-    }
-  )
 
   // Create schedule
   fastify.post<{ Body: CreateScheduleDto }>(
@@ -868,12 +533,8 @@ export async function learningRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      try {
-        const schedule = await learningService.createSchedule(request.body)
-        return reply.status(201).send(schedule)
-      } catch (error) {
-        return reply.status(400).send({ error: "Failed to create schedule" })
-      }
+      const result = await controller.createSchedule(request.body)
+      return reply.status(result.statusCode).send(result.data || { error: result.error })
     }
   )
 
@@ -916,61 +577,14 @@ export async function learningRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      try {
-        const schedule = await learningService.updateSchedule(
-          request.params.id,
-          request.body
-        )
-        if (!schedule) {
-          return reply.status(404).send({ error: "Schedule not found" })
-        }
-        return reply.send(schedule)
-      } catch (error) {
-        return reply.status(400).send({ error: "Failed to update schedule" })
-      }
+      const result = await controller.updateSchedule(request.params.id, request.body)
+      return reply.status(result.statusCode).send(result.data || { error: result.error })
     }
   )
 
-  // Delete schedule
-  fastify.delete<{ Params: { id: string } }>(
-    "/schedules/:id",
-    {
-      schema: {
-        tags: ['Learning'],
-        summary: 'Delete a schedule',
-        description: 'Delete a spaced repetition schedule',
-        params: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', format: 'uuid' }
-          },
-          required: ['id']
-        },
-        response: {
-          204: {
-            description: 'Schedule deleted successfully',
-          },
-          400: {
-            description: 'Bad request',
-            type: 'object',
-            properties: {
-              error: { type: 'string' }
-            }
-          }
-        }
-      }
-    },
-    async (request, reply) => {
-      try {
-        await learningService.deleteSchedule(request.params.id)
-        return reply.status(204).send()
-      } catch (error) {
-        return reply.status(400).send({ error: "Failed to delete schedule" })
-      }
-    }
-  )
+  // Utility endpoints
 
-  // Utility endpoint: Calculate next review using SM-2
+  // Calculate next review using SM-2
   fastify.post<{
     Body: { quality: number; easeFactor: number; interval: number; repetitions: number }
   }>(
@@ -1024,13 +638,90 @@ export async function learningRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { quality, easeFactor, interval, repetitions } = request.body
-      const result = learningService.calculateNextReview(
-        quality,
-        easeFactor,
-        interval,
-        repetitions
-      )
-      return reply.send(result)
+      const result = await controller.calculateNextReview(quality, easeFactor, interval, repetitions)
+      return reply.send(result.data)
+    }
+  )
+
+  // Process review with quality rating
+  fastify.post<{
+    Body: { userId: string; problemId: string; quality: number }
+  }>(
+    "/schedules/process-review",
+    {
+      schema: {
+        tags: ['Learning'],
+        summary: 'Process review',
+        description: 'Process a review with quality rating and update schedule',
+        body: {
+          type: 'object',
+          properties: {
+            userId: { type: 'string', format: 'uuid' },
+            problemId: { type: 'string', format: 'uuid' },
+            quality: {
+              type: 'number',
+              minimum: 0,
+              maximum: 5,
+              description: 'Response quality (0-5)'
+            }
+          },
+          required: ['userId', 'problemId', 'quality']
+        },
+        response: {
+          200: {
+            description: 'Updated schedule',
+            type: 'object',
+          },
+          400: {
+            description: 'Bad request',
+            type: 'object',
+            properties: {
+              error: { type: 'string' }
+            }
+          }
+        }
+      }
+    },
+    async (request, reply) => {
+      const { userId, problemId, quality } = request.body
+      const result = await controller.processReview(userId, problemId, quality)
+      return reply.status(result.statusCode).send(result.data || { error: result.error })
+    }
+  )
+
+  // Get user analytics
+  fastify.get<{ Querystring: { userId: string } }>(
+    "/analytics/user",
+    {
+      schema: {
+        tags: ['Learning'],
+        summary: 'Get user analytics',
+        description: 'Get performance analytics for a user',
+        querystring: {
+          type: 'object',
+          properties: {
+            userId: { type: 'string', format: 'uuid' }
+          },
+          required: ['userId']
+        },
+        response: {
+          200: {
+            description: 'User analytics',
+            type: 'object',
+          },
+          400: {
+            description: 'Bad request',
+            type: 'object',
+            properties: {
+              error: { type: 'string' }
+            }
+          }
+        }
+      }
+    },
+    async (request, reply) => {
+      const result = await controller.getUserAnalytics(request.query.userId)
+      return reply.status(result.statusCode).send(result.data || { error: result.error })
     }
   )
 }
