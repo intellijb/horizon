@@ -15,7 +15,7 @@ async function scalarPlugin(fastify: FastifyInstance) {
       },
       servers: [
         {
-          url: process.env.API_BASE_URL || "http://api.intellijb.com:20000",
+          url: process.env.API_BASE_URL || "http://api.intellijb.com",
         },
       ],
       tags: [
