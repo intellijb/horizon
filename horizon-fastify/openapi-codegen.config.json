@@ -1,0 +1,23 @@
+{
+  "input": "http://localhost:3000/documentation/json",
+  "output": "./src/generated/api-client",
+  "client": "axios",
+  "name": "HorizonApiClient",
+  "useOptions": true,
+  "useUnionTypes": true,
+  "exportCore": true,
+  "exportServices": true,
+  "exportModels": true,
+  "serviceClassName": "{tag}Service",
+  "services": {
+    "Learning": "LearningService",
+    "Authentication": "AuthenticationService",
+    "Users": "UsersService",
+    "Health": "HealthService"
+  },
+  "request": {
+    "headers": {
+      "Authorization": "Bearer {token}"
+    }
+  }
+}

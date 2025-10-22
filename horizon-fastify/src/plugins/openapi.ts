@@ -67,6 +67,10 @@ async function openApiPlugin(fastify: FastifyInstance) {
           name: 'Health',
           description: 'System health and monitoring',
         },
+        {
+          name: 'Learning',
+          description: 'Spaced-repetition learning platform with SM-2 algorithm',
+        },
       ],
     },
     hideUntagged: true,
