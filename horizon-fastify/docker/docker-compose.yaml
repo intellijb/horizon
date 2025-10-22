@@ -1,0 +1,64 @@
+services:
+  postgres:
+    image: postgres:17.5-alpine
+    container_name: horizon_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-horizon}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-horizon}
+    # 외부에서 접속 필요 시 20432 노출
+    ports:
+      - "${POSTGRES_PORT:-20432}:5432"
+    volumes:
+      - horizon_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-horizon} -d ${POSTGRES_DB:-horizon}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks: [horizon_network]
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: horizon_redis
+    restart: unless-stopped
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--save",
+        "60",
+        "1",
+        "--requirepass",
+        "${REDIS_PASSWORD}",
+      ]
+    # 외부에서 접속 필요 시 20379 노출
+    ports:
+      - "${REDIS_PORT:-20379}:6379"
+    volumes:
+      - horizon_redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD} PING | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks: [horizon_network]
+
+networks:
+  horizon_network:
+    name: horizon_network
+    driver: bridge
+
+volumes:
+  horizon_postgres_data:
+    name: horizon_postgres_data
+  horizon_redis_data:
+    name: horizon_redis_data
